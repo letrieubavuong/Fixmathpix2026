@@ -1,0 +1,427 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Globalization;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Controls;
+using System.Windows;
+using System.Windows.Media;
+
+namespace FixMathpix2025
+{
+    public class HighlightingColorViewModel : INotifyPropertyChanged
+    {
+        public string Name { get; set; }
+
+        private string _colorHex;
+        public string ColorHex
+        {
+            get => _colorHex;
+            set
+            {
+                if (_colorHex != value)
+                {
+                    _colorHex = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    public class ShortcutSetting : INotifyPropertyChanged
+    {
+        public string CommandName { get; set; }
+        public string FunctionName { get; set; }
+
+        private string _keyGesture;
+        public string KeyGesture
+        {
+            get => _keyGesture;
+            set
+            {
+                if (_keyGesture != value)
+                {
+                    _keyGesture = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(KeyGesture)));
+                }
+            }
+        }
+
+        private bool _isDuplicate;
+        public bool IsDuplicate
+        {
+            get => _isDuplicate;
+            set
+            {
+                if (_isDuplicate != value)
+                {
+                    _isDuplicate = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsDuplicate)));
+                }
+            }
+        }
+
+        private string _duplicateMessage;
+        public string DuplicateMessage
+        {
+            get => _duplicateMessage;
+            set
+            {
+                if (_duplicateMessage != value)
+                {
+                    _duplicateMessage = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DuplicateMessage)));
+                }
+            }
+        }
+        public event PropertyChangedEventHandler PropertyChanged;
+    }
+
+    public partial class SettingsWindow : Window
+    {
+        private EditorSettings _currentSettings;
+        private readonly MainWindow _mainWindow;
+        public ObservableCollection<HighlightingColorViewModel> HighlightingColors { get; set; }
+        public ObservableCollection<ShortcutSetting> Shortcuts { get; set; }
+
+        public SettingsWindow(MainWindow mainWindow)
+        {
+            InitializeComponent();
+            _mainWindow = mainWindow;
+            this.Owner = mainWindow;
+            LoadSettings();
+            PopulateControls();
+        }
+
+        private void LoadSettings()
+        {
+            _currentSettings = EditorSettings.Load();
+
+            // Lấy danh sách màu từ định nghĩa tô sáng hiện tại
+            var currentHighlighting = _mainWindow.textEditor.SyntaxHighlighting;
+            if (currentHighlighting != null)
+            {
+                HighlightingColors = new ObservableCollection<HighlightingColorViewModel>();
+                foreach (var color in currentHighlighting.NamedHighlightingColors)
+                {
+                    // Lấy màu đã lưu hoặc màu mặc định
+                    if (!_currentSettings.HighlightingColors.TryGetValue(color.Name, out var savedColorHex))
+                    {
+                        var defaultBrush = color.Foreground?.GetBrush(null) as SolidColorBrush;
+                        savedColorHex = defaultBrush?.Color.ToString() ?? "#FFFFFF";
+                    }
+
+                    HighlightingColors.Add(new HighlightingColorViewModel
+                    {
+                        Name = color.Name,
+                        ColorHex = savedColorHex
+                    });
+                }
+            }
+            LoadShortcuts();
+        }
+
+        private void PopulateControls()
+        {
+            // Font Family
+            FontFamilyComboBox.ItemsSource = Fonts.SystemFontFamilies.OrderBy(f => f.Source);
+            FontFamilyComboBox.SelectedItem = new FontFamily(_currentSettings.FontFamily);
+
+            // Font Size
+            FontSizeComboBox.ItemsSource = new List<double> { 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32 };
+            FontSizeComboBox.Text = _currentSettings.FontSize.ToString();
+
+            // Colors
+            ColorItemsControl.ItemsSource = HighlightingColors;
+
+            // Auto-save
+            AutoSaveCheckBox.IsChecked = _currentSettings.IsAutoSaveEnabled;
+
+            // Auto-save interval
+            AutoSaveIntervalComboBox.ItemsSource = new List<int> { 1, 2, 5, 10, 30, 60 };
+            AutoSaveIntervalComboBox.Text = _currentSettings.AutoSaveIntervalSeconds.ToString();
+
+            // Shortcuts
+            ShortcutListView.ItemsSource = Shortcuts;
+        }
+
+        private void LoadShortcuts()
+        {
+            Shortcuts = new ObservableCollection<ShortcutSetting>(GetDefaultShortcuts());
+
+            // Ghi đè bằng các phím tắt đã lưu của người dùng
+            foreach (var shortcut in Shortcuts)
+            {
+                if (_currentSettings.Shortcuts.TryGetValue(shortcut.CommandName, out var savedGesture))
+                {
+                    shortcut.KeyGesture = savedGesture;
+                }
+                shortcut.PropertyChanged += Shortcut_PropertyChanged;
+            }
+            ValidateAndHighlightDuplicates();
+        }
+        private void Shortcut_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ShortcutSetting.KeyGesture))
+            {
+                ValidateAndHighlightDuplicates();
+            }
+        }
+
+        private List<ShortcutSetting> GetDefaultShortcuts()
+        {
+            // Danh sách này nên được duy trì để khớp với các lệnh trong ứng dụng
+            return new List<ShortcutSetting>
+            {
+                new ShortcutSetting { FunctionName = "Mở tệp", CommandName = "ApplicationCommands.Open", KeyGesture = "Ctrl+O" },
+                new ShortcutSetting { FunctionName = "Lưu tệp", CommandName = "ApplicationCommands.Save", KeyGesture = "Ctrl+S" },
+                new ShortcutSetting { FunctionName = "Tìm kiếm", CommandName = "ApplicationCommands.Find", KeyGesture = "Ctrl+F" },
+                new ShortcutSetting { FunctionName = "Thay thế", CommandName = "ApplicationCommands.Replace", KeyGesture = "Ctrl+H" },
+                new ShortcutSetting { FunctionName = "In đậm", CommandName = "local:CustomCommands.Bold", KeyGesture = "Ctrl+B" },
+                new ShortcutSetting { FunctionName = "In nghiêng", CommandName = "local:CustomCommands.Italic", KeyGesture = "Ctrl+I" },
+                new ShortcutSetting { FunctionName = "Gạch chân", CommandName = "local:CustomCommands.Underline", KeyGesture = "Ctrl+U" },
+                new ShortcutSetting { FunctionName = "Viết hoa", CommandName = "avalonedit:AvalonEditCommands.ConvertToUppercase", KeyGesture = "Ctrl+Shift+U" },
+                new ShortcutSetting { FunctionName = "Chuyển đổi Ghi chú", CommandName = "local:CustomCommands.ToggleComment", KeyGesture = "Ctrl+/" },
+                new ShortcutSetting { FunctionName = "Chế độ toán học ($...$)", CommandName = "local:CustomCommands.MathMode", KeyGesture = "Ctrl+M" },
+                new ShortcutSetting { FunctionName = "Chèn Lời giải", CommandName = "local:CustomCommands.InsertLoigiai", KeyGesture = "Ctrl+L" },
+                new ShortcutSetting { FunctionName = "Soát lỗi chính tả", CommandName = "local:CustomCommands.SpellCheck", KeyGesture = "Ctrl+F7" },
+                new ShortcutSetting { FunctionName = "Dọn dẹp văn bản", CommandName = "local:CustomCommands.CleanupText", KeyGesture = "Ctrl+Alt+L" }
+            };
+        }
+
+        private void ApplySettings()
+        {
+            // Lấy giá trị từ UI
+            if (FontFamilyComboBox.SelectedItem is FontFamily selectedFont)
+            {
+                _currentSettings.FontFamily = selectedFont.Source;
+            }
+
+            if (double.TryParse(FontSizeComboBox.Text, out double newSize))
+            {
+                _currentSettings.FontSize = newSize;
+            }
+
+            // Auto-save
+            _currentSettings.IsAutoSaveEnabled = AutoSaveCheckBox.IsChecked ?? true;
+
+            if (int.TryParse(AutoSaveIntervalComboBox.Text, out int newInterval) && newInterval > 0)
+            {
+                _currentSettings.AutoSaveIntervalSeconds = newInterval;
+            }
+
+
+            _currentSettings.HighlightingColors.Clear();
+            if (HighlightingColors != null)
+            {
+                foreach (var colorVm in HighlightingColors)
+                {
+                    try
+                    {
+                        // Validate hex color
+                        ColorConverter.ConvertFromString(colorVm.ColorHex);
+                        _currentSettings.HighlightingColors[colorVm.Name] = colorVm.ColorHex;
+                    }
+                    catch (FormatException)
+                    {
+                        MessageBox.Show($"Mã màu không hợp lệ cho '{colorVm.Name}': {colorVm.ColorHex}", "Lỗi màu sắc", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return; // Ngăn không cho áp dụng nếu có lỗi
+                    }
+                }
+            }
+
+            // Shortcuts
+            // --- Validation for duplicate shortcuts ---
+            var shortcutMap = new Dictionary<string, List<string>>();
+            if (Shortcuts != null)
+            {
+                foreach (var shortcut in Shortcuts)
+                {
+                    if (!string.IsNullOrWhiteSpace(shortcut.KeyGesture))
+                    {
+                        if (!shortcutMap.ContainsKey(shortcut.KeyGesture))
+                        {
+                            shortcutMap[shortcut.KeyGesture] = new List<string>();
+                        }
+                        shortcutMap[shortcut.KeyGesture].Add($"'{shortcut.FunctionName}'");
+                    }
+                }
+
+                var duplicates = shortcutMap.Where(kvp => kvp.Value.Count > 1).ToList();
+                if (duplicates.Any())
+                {
+                    var errorBuilder = new System.Text.StringBuilder();
+                    errorBuilder.AppendLine("Không thể lưu cài đặt do có phím tắt bị trùng lặp:");
+                    foreach (var duplicate in duplicates)
+                    {
+                        errorBuilder.AppendLine($"  - Phím tắt '{duplicate.Key}' được gán cho các chức năng: {string.Join(", ", duplicate.Value)}");
+                    }
+                    MessageBox.Show(this, errorBuilder.ToString(), "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return; // Ngăn không cho áp dụng cài đặt
+                }
+            }
+
+            ValidateAndHighlightDuplicates();
+            if (Shortcuts.Any(s => s.IsDuplicate))
+            {
+                var duplicates = Shortcuts.Where(s => s.IsDuplicate)
+                                          .GroupBy(s => s.KeyGesture)
+                                          .Where(g => g.Count() > 1);
+
+                var errorBuilder = new System.Text.StringBuilder();
+                errorBuilder.AppendLine("Không thể lưu cài đặt do có phím tắt bị trùng lặp:");
+                foreach (var group in duplicates)
+                {
+                    var functionNames = group.Select(g => $"'{g.FunctionName}'");
+                    errorBuilder.AppendLine($"  - Phím tắt '{group.Key}' được gán cho các chức năng: {string.Join(", ", functionNames)}");
+                }
+                MessageBox.Show(this, errorBuilder.ToString(), "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
+                return; // Ngăn không cho áp dụng cài đặt
+            }
+
+            // --- Save shortcuts if validation passes ---
+            _currentSettings.Shortcuts.Clear();
+            if (Shortcuts != null)
+            {
+                foreach (var shortcut in Shortcuts)
+                {
+                    _currentSettings.Shortcuts[shortcut.CommandName] = shortcut.KeyGesture;
+                }
+            }
+
+            // Áp dụng cho MainWindow
+            _mainWindow.ApplySettings(_currentSettings);
+        }
+
+        private void SaveSettings()
+        {
+            ApplySettings(); // Đảm bảo settings object được cập nhật trước khi lưu
+            _currentSettings.Save();
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                SaveSettings();
+                this.DialogResult = true;
+                this.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi lưu cài đặt: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ApplyButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                ApplySettings();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi áp dụng cài đặt: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.DialogResult = false;
+            this.Close();
+        }
+
+        private void ShortcutTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            e.Handled = true;
+
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            // Lấy các phím bổ trợ (Ctrl, Shift, Alt)
+            ModifierKeys modifiers = Keyboard.Modifiers;
+            Key key = e.Key;
+
+            // Xử lý các phím hệ thống đặc biệt
+            if (key == Key.System)
+            {
+                key = e.SystemKey;
+            }
+
+            // Bỏ qua nếu chỉ nhấn phím bổ trợ
+            if (key == Key.LeftCtrl || key == Key.RightCtrl || key == Key.LeftShift || key == Key.RightShift ||
+                key == Key.LeftAlt || key == Key.RightAlt || key == Key.LWin || key == Key.RWin)
+            {
+                return;
+            }
+
+            // Tạo chuỗi phím tắt và cập nhật TextBox
+            var converter = new KeyGestureConverter();
+            textBox.Text = converter.ConvertToString(new KeyGesture(key, modifiers));
+        }
+
+        private void ValidateAndHighlightDuplicates()
+        {
+            if (Shortcuts == null) return;
+
+            // Trước tiên, đặt lại trạng thái trùng lặp cho tất cả các mục
+            foreach (var s in Shortcuts)
+            {
+                s.IsDuplicate = false;
+                s.DuplicateMessage = null;
+            }
+
+            // Nhóm các phím tắt theo tổ hợp phím để tìm các phím bị trùng
+            var gestureGroups = Shortcuts
+                .Where(s => !string.IsNullOrWhiteSpace(s.KeyGesture))
+                .GroupBy(s => s.KeyGesture);
+
+            foreach (var group in gestureGroups)
+            {
+                if (group.Count() > 1)
+                {
+                    // Tổ hợp phím này bị trùng lặp
+                    var allFunctionNames = group.Select(s => $"'{s.FunctionName}'").ToList();
+                    foreach (var shortcut in group)
+                    {
+                        shortcut.IsDuplicate = true;
+                        var otherFunctionNames = allFunctionNames.Where(name => name != $"'{shortcut.FunctionName}'");
+                        shortcut.DuplicateMessage = $"Phím tắt này cũng được sử dụng cho: {string.Join(", ", otherFunctionNames)}";
+                    }
+                }
+            }
+        }
+    }
+
+    public class HexToBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string hexColor)
+            {
+                try
+                {
+                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hexColor));
+                }
+                catch
+                {
+                    return Brushes.Transparent;
+                }
+            }
+            return Brushes.Transparent;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+    }
+}

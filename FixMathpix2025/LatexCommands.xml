@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Commands>
+  <Command name="dfrac" description="Tạo một phân số." />
+  <Command name="sqrt" description="Tạo một căn bậc hai." />
+  <Command name="begin" description="Bắt đầu một môi trường." />
+  <Command name="end" description="Kết thúc một môi trường." />
+  <Command name="item" description="Tạo một mục trong danh sách." />
+  <Command name="listEX" description="Tạo danh sách tùy chỉnh." />
+  <Command name="enumEX" description="Tạo danh sách có thứ tự tùy chỉnh." />
+  <Command name="textbf" description="In đậm văn bản." />
+  <Command name="textit" description="In nghiêng văn bản." />
+  <Command name="alpha" description="Ký tự alpha: α" />
+  <Command name="beta" description="Ký tự beta: β" />
+  <Command name="gamma" description="Ký tự gamma: γ" />
+  <Command name="delta" description="Ký tự delta: δ" />
+</Commands>

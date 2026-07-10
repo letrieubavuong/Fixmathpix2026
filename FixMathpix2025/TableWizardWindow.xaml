@@ -1,0 +1,116 @@
+<Window x:Class="FixMathpix2025.TableWizardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FixMathpix2025"
+        mc:Ignorable="d"        
+        Title="Tạo bảng LaTeX"
+        SizeToContent="WidthAndHeight" MinHeight="250"
+        WindowStartupLocation="CenterOwner"
+        Background="#FF2D2D30" Foreground="White"        
+        ResizeMode="CanResizeWithGrip">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="White"/>            
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="Padding" Value="3"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="2"/>
+        </Style>        
+    </Window.Resources>
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>            
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Label Grid.Row="0" Grid.Column="0" Content="Số cột:" Margin="0,0,10,0"/>
+        <ComboBox Grid.Row="0" Grid.Column="1" x:Name="ColumnCountComboBox" Width="80" HorizontalAlignment="Left" SelectionChanged="ColumnCountComboBox_SelectionChanged" Style="{StaticResource DarkComboBoxStyle}">
+            <ComboBoxItem IsSelected="True">2</ComboBoxItem>
+            <ComboBoxItem>3</ComboBoxItem>
+            <ComboBoxItem>4</ComboBoxItem>
+            <ComboBoxItem>5</ComboBoxItem>
+            <ComboBoxItem>6</ComboBoxItem>
+            <ComboBoxItem>7</ComboBoxItem>
+            <ComboBoxItem>8</ComboBoxItem>
+            <ComboBoxItem>9</ComboBoxItem>
+            <ComboBoxItem>10</ComboBoxItem>
+            <ComboBoxItem>11</ComboBoxItem>
+            <ComboBoxItem>12</ComboBoxItem>
+            <ComboBoxItem>13</ComboBoxItem>
+            <ComboBoxItem>14</ComboBoxItem>
+            <ComboBoxItem>15</ComboBoxItem>
+            <ComboBoxItem>16</ComboBoxItem>
+            <ComboBoxItem>17</ComboBoxItem>
+            <ComboBoxItem>18</ComboBoxItem>
+            <ComboBoxItem>19</ComboBoxItem>
+            <ComboBoxItem>20</ComboBoxItem>
+        </ComboBox>
+
+        <Label Grid.Row="0" Grid.Column="2" Content="Số hàng:" Margin="0,0,10,0"/>
+        <ComboBox Grid.Row="0" Grid.Column="3" x:Name="RowCountComboBox" Width="80" HorizontalAlignment="Left" Margin="0,0,0,0" SelectionChanged="RowCountComboBox_SelectionChanged" Style="{StaticResource DarkComboBoxStyle}">
+            <ComboBoxItem>2</ComboBoxItem>
+            <ComboBoxItem IsSelected = "True">3</ComboBoxItem>
+            <ComboBoxItem>4</ComboBoxItem>
+            <ComboBoxItem>5</ComboBoxItem>
+            <ComboBoxItem>6</ComboBoxItem>
+            <ComboBoxItem>7</ComboBoxItem>
+            <ComboBoxItem>8</ComboBoxItem>
+            <ComboBoxItem>9</ComboBoxItem>
+            <ComboBoxItem>10</ComboBoxItem>
+        </ComboBox>
+
+        <Label Grid.Row="0" Grid.Column="4" Content="Cấu trúc cột:" Margin="0,0,10,0"/>
+        <TextBox Grid.Row="0" Grid.Column="5" Width="100" x:Name="ColumnSpecTextBox" Margin="0,0,0,0" Text="c|M"/>
+
+        <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="6" x:Name="TableContentGrid"/>
+        <StackPanel Grid.Row="4" Grid.Column="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">            
+            <Button Content="Tạo bảng" Width="80" IsDefault="True" Click="OkButton_Click"/>
+            <Button Content="Hủy" Width="80" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

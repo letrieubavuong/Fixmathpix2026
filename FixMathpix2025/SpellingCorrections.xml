@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Corrections>
+  <!-- Thêm các cặp từ sai và từ đúng ở đây -->
+  <!-- Ví dụ: <Correction find="từ sai" replace="từ đúng" /> -->
+  <Correction find="vật lí" replace="vật lý" />
+  <Correction find="hoá học" replace="hóa học" />
+</Corrections>

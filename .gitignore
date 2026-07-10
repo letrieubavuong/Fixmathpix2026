@@ -1,0 +1,23 @@
+# Build folders
+bin/
+obj/
+
+# NuGet Packages
+packages/*
+!packages/repositories.config
+
+# User-specific files
+*.user
+*.userprefs
+*.suo
+*.sln.docstates
+
+# Visual Studio files
+.vs/
+.vs/*
+
+# Temporary files
+*.tmp
+*.log
+build_output.txt
+build.log

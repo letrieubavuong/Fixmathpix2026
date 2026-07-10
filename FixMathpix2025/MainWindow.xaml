@@ -1,0 +1,770 @@
+﻿<Window x:Class="FixMathpix2025.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FixMathpix2025"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+
+        xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit" d:DataContext="{d:DesignInstance Type=local:HighlightingColorViewModel}"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="1080" Width="1920"
+        Background="#FF2D2D30" Foreground="White" WindowStartupLocation="CenterScreen" WindowState="Maximized">    <Window.CommandBindings>
+        <CommandBinding Command="local:CustomCommands.Bold" Executed="BoldButton_Click" />
+        <CommandBinding Command="local:CustomCommands.Italic" Executed="ItalicButton_Click" />
+        <CommandBinding Command="local:CustomCommands.Underline" Executed="UnderlineButton_Click" />
+        <CommandBinding Command="ApplicationCommands.Open" Executed="OpenFile_Click" />
+        <CommandBinding Command="ApplicationCommands.Save" Executed="SaveFileButton_Click" />
+        <CommandBinding Command="ApplicationCommands.Find" Executed="FindReplace_Executed" />
+        <CommandBinding Command="ApplicationCommands.Replace" Executed="FindReplace_Executed" />
+        <CommandBinding Command="local:CustomCommands.ToggleComment" Executed="ToggleComment_Click" />
+        <CommandBinding Command="local:CustomCommands.CleanupText" Executed="CleanupText_Click" />
+        <CommandBinding Command="local:CustomCommands.InsertEnvironment" Executed="InsertEnvironment_Executed" />
+        <CommandBinding Command="local:CustomCommands.InsertFigure" Executed="InsertFigure_Executed" />
+        <CommandBinding Command="local:CustomCommands.MathMode" Executed="MathModeButton_Click" />
+        <CommandBinding Command="local:CustomCommands.SpellCheck" Executed="SpellCheckButton_Click" />
+        <CommandBinding Command="local:CustomCommands.InsertLoigiai" Executed="LoigiaiButton_Click" />
+        <CommandBinding Command="local:CustomCommands.GoToLine" Executed="GoToLine_Executed" />
+    </Window.CommandBindings>
+
+
+    <Window.Resources>
+        <local:HexToBrushConverter x:Key="HexToBrushConverter"/>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="CenterAlignedButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="CenterAlignedButtonWithIcon" TargetType="Button" BasedOn="{StaticResource CenterAlignedButton}">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Margin" Value="3"/>
+        </Style>
+        <Style x:Key="ScrollBarThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="IsTabStop" Value="false"/>
+            <Setter Property="Focusable" Value="false"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border CornerRadius="3" Background="#FF686868" BorderBrush="Transparent" BorderThickness="0" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid>
+                            <Border Background="#FF2D2D30" />
+                            <Track x:Name="PART_Track" IsDirectionReversed="true">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollBarThumbStyle}" />
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ToolTip">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5,3,5,3"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="{x:Type ContextMenu}">
+            <Setter Property="Background" Value="#FF2D2D30"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="MinWidth" Value="180"/>
+        </Style>
+
+        <Style TargetType="{x:Type MenuItem}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type MenuItem}">
+                        <Border x:Name="Border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                Padding="{TemplateBinding Padding}" 
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter ContentSource="Header" 
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#FF555555"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="Gray"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="72"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="55"/>
+                <ColumnDefinition Width="125"/>
+                <ColumnDefinition Width="130"/>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="80"/>
+                <ColumnDefinition Width="90"/>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="80"/>
+                <ColumnDefinition Width="80"/>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="60"/>
+                <ColumnDefinition Width="70"/>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="90"/> <!-- Table Wizard Controls -->
+                <ColumnDefinition Width="70"/>
+                <ColumnDefinition Width="70"/>
+                <ColumnDefinition Width="70"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" HorizontalAlignment="Stretch" Margin="3">
+                <Button x:Name="OpenFileButton" HorizontalAlignment="Stretch" Command="ApplicationCommands.Open" ToolTip="Mở một tệp TeX từ máy tính của bạn (Ctrl+O).">
+                    <StackPanel>
+                        <iconPacks:PackIconMaterial Kind="FolderOpenOutline" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Mở TeX" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" HorizontalAlignment="Stretch" Margin="3">
+                <DockPanel>
+                    <Button x:Name="SaveFileButton" Width="60" Command="ApplicationCommands.Save" ToolTip="Lưu tệp TeX hiện tại (Ctrl+S).">
+                        <StackPanel>
+                            <iconPacks:PackIconMaterial Kind="ContentSave" HorizontalAlignment="Center" Width="20" Height="20"/>
+                            <TextBlock Text="Lưu TeX" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="CloseFileButton" Width="60" Click="CloseFile_Click" ToolTip="Đóng tệp hiện tại." Margin="5,0,0,0">
+                        <StackPanel>
+                            <iconPacks:PackIconMaterial Kind="FileRemoveOutline" HorizontalAlignment="Center" Width="20" Height="20"/>
+                            <TextBlock Text="Đóng TeX" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Button>
+                </DockPanel>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="2" HorizontalAlignment="Left">
+                <DockPanel>
+                    <Button x:Name="BoldButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Command="local:CustomCommands.Bold" ToolTip="In đậm (Ctrl+B)">
+                        <iconPacks:PackIconMaterial Kind="FormatBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button x:Name="ItalicButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Command="local:CustomCommands.Italic" ToolTip="In nghiêng (Ctrl+I)">
+                        <iconPacks:PackIconMaterial Kind="FormatItalic" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button x:Name="UnderlineButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Command="local:CustomCommands.Underline" ToolTip="Gạch chân (Ctrl+U)">
+                        <iconPacks:PackIconMaterial Kind="FormatUnderline" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                </DockPanel>                
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="2" HorizontalAlignment="Left">
+                <DockPanel>
+                    <Button x:Name="AlignLeftButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Click="AlignLeftButton_Click">
+                        <iconPacks:PackIconMaterial Kind="FormatAlignLeft" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button x:Name="AlignCenterButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Click="AlignCenterButton_Click">
+                        <iconPacks:PackIconMaterial Kind="FormatAlignCenter" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button x:Name="AlignRightButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Click="AlignRightButton_Click">
+                        <iconPacks:PackIconMaterial Kind="FormatAlignRight" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                </DockPanel>                
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="3">
+                <ComboBox x:Name="CommandComboBox" Style="{StaticResource DarkComboBoxStyle}" Margin="3" SelectedIndex="0">
+                    <ComboBoxItem>chapter</ComboBoxItem>
+                    <ComboBoxItem>section</ComboBoxItem>
+                    <ComboBoxItem>subsection</ComboBoxItem>
+                    <ComboBoxItem>subsubsection</ComboBoxItem>
+                    <ComboBoxItem>paragraph</ComboBoxItem>
+                </ComboBox>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="3">
+                <Button x:Name="ApplyCommandButton" HorizontalAlignment="Left" Margin="0,3,3,3" Width="105" Click="ApplyCommandButton_Click">
+                    <DockPanel>
+                        <iconPacks:PackIconMaterial Kind="ContentPaste" Margin="5,0,0,0" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Áp dụng lệnh" HorizontalAlignment="Center" Margin="5,0,5,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="4">
+                <DockPanel VerticalAlignment="Center">
+                    <TextBlock Text="Số cột" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="ListColumnCountComboBox" Width="36" Style="{StaticResource DarkComboBoxStyle}" Margin="5,3,5,3" SelectedIndex="0">
+                        <ComboBoxItem>1</ComboBoxItem>
+                        <ComboBoxItem>2</ComboBoxItem>
+                        <ComboBoxItem>3</ComboBoxItem>
+                        <ComboBoxItem>4</ComboBoxItem>
+                        <ComboBoxItem>5</ComboBoxItem>
+                        <ComboBoxItem>6</ComboBoxItem>
+                    </ComboBox>
+                    <TextBlock Text="Kiểu" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="EnumStyleComboBox" Width="36" Style="{StaticResource DarkComboBoxStyle}" Margin="5,3,0,3" SelectedIndex="0">
+                        <ComboBoxItem>a)</ComboBoxItem>
+                        <ComboBoxItem>a.</ComboBoxItem>
+                        <ComboBoxItem>(a)</ComboBoxItem>
+                        <ComboBoxItem>1)</ComboBoxItem>
+                        <ComboBoxItem>1.</ComboBoxItem>
+                        <ComboBoxItem>(1)</ComboBoxItem>
+                    </ComboBox>
+                </DockPanel>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="4">
+                <DockPanel>
+                    <Button x:Name="ListEXButton" HorizontalAlignment="Left" Margin="0,3,0,3" Width="75" Click="ListEXButton_Click">
+                        <DockPanel>
+                            <iconPacks:PackIconMaterial Kind="FormatListBulleted" Margin="5,0,0,0"
+                                                        HorizontalAlignment="Center" Width="16" Height="16"/>
+                            <TextBlock Text="listEX" HorizontalAlignment="Center" Margin="5,0,5,0"/>
+                        </DockPanel>
+                    </Button>
+                    <Button x:Name="EnumEXButton" HorizontalAlignment="Left" Margin="3,3,0,3" Width="75" Click="EnumEXButton_Click">
+                        <DockPanel>
+                            <iconPacks:PackIconMaterial Kind="FormatListNumbered" Margin="5,0,0,0" HorizontalAlignment="Center" Width="16" Height="16"/>
+                            <TextBlock Text="enumEX" HorizontalAlignment="Center" Margin="5,0,5,0"/>
+                        </DockPanel>
+                    </Button>
+                </DockPanel>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="5" HorizontalAlignment="Left">
+                <DockPanel>
+                    <Button x:Name="ItemizeButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Margin="3,3,0,3" ToolTip="Tạo danh sách itemize" Click="ItemizeButton_Click">
+                        <iconPacks:PackIconMaterial Kind="FormatListBulleted" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button x:Name="EnumerateButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Margin="3,3,0,3" ToolTip="Tạo danh sách enumerate" Click="EnumerateButton_Click">
+                        <iconPacks:PackIconMaterial Kind="FormatListNumbered" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button x:Name="ItemChoiceButton" Style="{StaticResource CenterAlignedButtonWithIcon}" ToolTip="Tạo danh sách itemchoice" Click="ItemChoiceButton_Click">
+                        <iconPacks:PackIconMaterial Kind="FormatListNumbered" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                </DockPanel>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="5" HorizontalAlignment="Left">
+                <DockPanel>
+                    <Button x:Name="MathModeButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Margin="3,3,0,3" ToolTip="Thêm $...$ vào đoạn văn bản (Ctrl+M)" Command="local:CustomCommands.MathMode">
+                        <DockPanel>
+                            <TextBlock Text="$...$"/>
+                        </DockPanel>
+                    </Button>
+                    <Button x:Name="AlignStarButton" Style="{StaticResource CenterAlignedButtonWithIcon}" Margin="3,3,0,3" ToolTip="Tạo môi trường \begin{align*}" Click="AlignStarButton_Click">
+                        <DockPanel>
+                            <TextBlock Text="Align"/>
+                        </DockPanel>
+                    </Button>
+                    <Button x:Name="ShortAnsButton" Style="{StaticResource CenterAlignedButtonWithIcon}" ToolTip="Tạo lệnh \shortans[oly]{}" Click="ShortAnsButton_Click">
+                        <DockPanel>
+                            <TextBlock Text="SA"/>
+                        </DockPanel>                        
+                    </Button>
+                    <Button x:Name="EquationButton" Style="{StaticResource CenterAlignedButtonWithIcon}" ToolTip="Chuyển nội dung đang chọn vào môi trường equation." Click="EquationButton_Click">
+                        <DockPanel>
+                            <TextBlock Text="Eq"/>
+                        </DockPanel>
+                    </Button>
+                </DockPanel>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="6" Grid.RowSpan="2" HorizontalAlignment="Stretch" Margin="3">
+                <Button x:Name="ChuyenTeXButton" HorizontalAlignment="Stretch" Click="ChuyenTeXButton_Click" ToolTip="Chuyển đổi văn bản TeX sang định dạng chuẩn.">
+                    <StackPanel>
+                        <iconPacks:PackIconMaterial Kind="Run" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Chuyển TeX" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="7" HorizontalAlignment="Stretch" Margin="3">
+                <Button x:Name="FindReplaceButton" HorizontalAlignment="Stretch" Click="FindReplaceButton_Click" ToolTip="Tìm kiếm và Thay thế (Ctrl+F / Ctrl+H)">
+                    <DockPanel VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="Magnify" Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Tìm kiếm" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="8" HorizontalAlignment="Stretch" Margin="3">
+                <Button x:Name="SettingsButton" HorizontalAlignment="Stretch" Click="SettingsButton_Click" ToolTip="Mở cài đặt">
+                    <DockPanel VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="Cog" 
+                                                    Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Cài đặt" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="7" HorizontalAlignment="Stretch" Margin="3">
+                <Button x:Name="SpellCheckButton" HorizontalAlignment="Stretch"  ToolTip="Soát lỗi chính tả và thay thế theo danh sách định sẵn (Ctrl+F7)." Command="local:CustomCommands.SpellCheck">
+                    <DockPanel VerticalAlignment="Center">
+                        <TextBlock Text="Soát lỗi" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="8" HorizontalAlignment="Stretch" Margin="3"> <!-- New ManageSpellingButton -->
+                <Button x:Name="ManageSpellingButton" HorizontalAlignment="Stretch" Click="ManageSpellingButton_Click" ToolTip="Mở cửa sổ quản lý các quy tắc sửa lỗi chính tả.">
+                    <DockPanel VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="Cog" 
+                                                    Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Quản lý lỗi" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="9" HorizontalAlignment="Stretch" Margin="3"> <!-- CauDSButton moved from 8 to 9 -->
+                <Button x:Name="CauDSButton" HorizontalAlignment="Stretch" Click="CauDSButton_Click" ToolTip="Chuyển đổi danh sách nhận định sang câu hỏi Đúng/Sai.">
+                    <DockPanel VerticalAlignment="Center">
+                        <TextBlock Text="Câu Đ/S" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="10" HorizontalAlignment="Stretch" Margin="3"> <!-- TrueButton moved from 9 to 10 -->
+                <Button HorizontalAlignment="Stretch" Click="TrueButton_Click" ToolTip="Chèn lệnh \True{}">
+                    <DockPanel VerticalAlignment="Center" Width="70">
+                        <iconPacks:PackIconMaterial Kind="CheckBold" 
+                                                    Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="\True " VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="10" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="LoigiaiButton_Click" ToolTip="Chèn lệnh \loigiai{} (Ctrl+L)">
+                    <DockPanel VerticalAlignment="Center" Width="70">
+                        <iconPacks:PackIconMaterial Kind="LightbulbOnOutline" 
+                                                    Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Lời giải " VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="11">
+                <DockPanel VerticalAlignment="Center">
+                    <TextBlock Text="Bài" Width="35" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="BaiComboBox" Width="65" Height="28" Style="{StaticResource DarkComboBoxStyle}" Margin="5,3,0,3" SelectedIndex="0">
+                        <ComboBoxItem>01</ComboBoxItem>
+                        <ComboBoxItem>02</ComboBoxItem>
+                        <ComboBoxItem>03</ComboBoxItem>
+                        <ComboBoxItem>04</ComboBoxItem>
+                        <ComboBoxItem>05</ComboBoxItem>
+                        <ComboBoxItem>06</ComboBoxItem>
+                        <ComboBoxItem>07</ComboBoxItem>
+                        <ComboBoxItem>08</ComboBoxItem>
+                        <ComboBoxItem>09</ComboBoxItem>
+                        <ComboBoxItem>10</ComboBoxItem>
+                        <ComboBoxItem>11</ComboBoxItem>
+                        <ComboBoxItem>12</ComboBoxItem>
+                        <ComboBoxItem>13</ComboBoxItem>
+                        <ComboBoxItem>14</ComboBoxItem>
+                        <ComboBoxItem>15</ComboBoxItem>
+                        <ComboBoxItem>16</ComboBoxItem>
+                        <ComboBoxItem>17</ComboBoxItem>
+                        <ComboBoxItem>18</ComboBoxItem>
+                        <ComboBoxItem>19</ComboBoxItem>
+                        <ComboBoxItem>20</ComboBoxItem>
+                        <ComboBoxItem>21</ComboBoxItem>
+                        <ComboBoxItem>22</ComboBoxItem>
+                        <ComboBoxItem>23</ComboBoxItem>
+                        <ComboBoxItem>24</ComboBoxItem>
+                        <ComboBoxItem>25</ComboBoxItem>
+                        <ComboBoxItem>26</ComboBoxItem>
+                        <ComboBoxItem>27</ComboBoxItem>
+                        <ComboBoxItem>28</ComboBoxItem>
+                        <ComboBoxItem>29</ComboBoxItem>
+                        <ComboBoxItem>30</ComboBoxItem>
+                        <ComboBoxItem>31</ComboBoxItem>
+                        <ComboBoxItem>32</ComboBoxItem>
+                        <ComboBoxItem>33</ComboBoxItem>
+                        <ComboBoxItem>34</ComboBoxItem>
+                        <ComboBoxItem>35</ComboBoxItem>
+                        <ComboBoxItem>36</ComboBoxItem>
+                        <ComboBoxItem>37</ComboBoxItem>
+                        <ComboBoxItem>38</ComboBoxItem>
+                        <ComboBoxItem>39</ComboBoxItem>
+                        <ComboBoxItem>40</ComboBoxItem>
+                        <ComboBoxItem>41</ComboBoxItem>
+                        <ComboBoxItem>42</ComboBoxItem>
+                        <ComboBoxItem>43</ComboBoxItem>
+                        <ComboBoxItem>44</ComboBoxItem>
+                        <ComboBoxItem>45</ComboBoxItem>
+                        <ComboBoxItem>46</ComboBoxItem>
+                        <ComboBoxItem>47</ComboBoxItem>
+                        <ComboBoxItem>48</ComboBoxItem>
+                        <ComboBoxItem>49</ComboBoxItem>
+                        <ComboBoxItem>50</ComboBoxItem>
+                    </ComboBox>
+                </DockPanel>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="11">
+                <DockPanel VerticalAlignment="Center">
+                    <TextBlock Text="Phần" Width="35"  VerticalAlignment="Center"/>
+                    <ComboBox x:Name="PhanComboBox" Width="65"  Height="28" VerticalContentAlignment="Center" Style="{StaticResource DarkComboBoxStyle}" Margin="5,3,0,3" SelectedIndex="0">
+                        <ComboBoxItem>I</ComboBoxItem>
+                        <ComboBoxItem>II</ComboBoxItem>
+                        <ComboBoxItem>III</ComboBoxItem>
+                        <ComboBoxItem>IV</ComboBoxItem>
+                    </ComboBox>
+                </DockPanel>
+            </Grid>
+
+            <Grid Grid.Row="0" Grid.Column="12" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="CauhoiButton_Click" ToolTip="Chèn cấu trúc câu hỏi dựa trên Phần và Bài đã chọn.">
+                    <TextBlock Text="Câu hỏi" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="12" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="SortQuestions_Click" ToolTip="Sắp xếp câu hỏi theo cấu trúc Phần I, II, III, IV.">
+                    <TextBlock Text="Sắp xếp" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Button>
+            </Grid>
+
+            <Grid Grid.Row="0" Grid.Column="9" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="FixHevaButton_Click" ToolTip="Sửa khối \heva{} hiện tại và tìm khối tiếp theo.">
+                    <DockPanel VerticalAlignment="Center" Width="70">
+                        <iconPacks:PackIconMaterial Kind="AutoFix" 
+                                                    Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="\heva{}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <!-- Table Creation Controls -->
+            <Grid Grid.Row="0" Grid.Column="13" Grid.RowSpan="2" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="BangButton_Click" ToolTip="Mở wizard để tạo bảng LaTeX.">
+                    <DockPanel VerticalAlignment="Center" Width="70">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <iconPacks:PackIconMaterial Kind="Table" VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                            <TextBlock Text="Tạo bảng" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="14">
+                <DockPanel VerticalAlignment="Center">
+                    <TextBlock Text="Độ rộng" Width="45" Margin="3,0,0,0"  VerticalAlignment="Center"/>
+                    <ComboBox x:Name="Doronghinhanh" Width="45"  Height="28" VerticalContentAlignment="Center" Style="{StaticResource DarkComboBoxStyle}" Margin="5,3,0,3" SelectedIndex="0">
+                        <ComboBoxItem>5</ComboBoxItem>
+                        <ComboBoxItem>6</ComboBoxItem>
+                        <ComboBoxItem>7</ComboBoxItem>
+                        <ComboBoxItem>8</ComboBoxItem>
+                        <ComboBoxItem>9</ComboBoxItem>
+                        <ComboBoxItem>10</ComboBoxItem>
+                    </ComboBox>
+                </DockPanel>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="14" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="HinhanhButton_Click" ToolTip="Chèn môi trường hình ảnh với độ rộng đã chọn.">
+                    <DockPanel VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="ImageArea" 
+                                                    Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Hình ảnh" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="15" HorizontalAlignment="Stretch" Margin="3">
+                <!-- TrueButton moved from 9 to 10 -->
+                <Button HorizontalAlignment="Stretch" Click="ImminiButton_Click" ToolTip="Chèn lệnh \immini{} cho đoạn văn bản đã chọn.">
+                    <DockPanel VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="CheckBold" 
+                                                    Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="\immini " VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="15" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="ImminiThmButton_Click" ToolTip="Chèn lệnh \immini[thm]{} cho đoạn văn bản đã chọn.">
+                    <DockPanel VerticalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="LightbulbOnOutline" 
+                                                    Margin="5,0,0,0"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="\immini[thm] " VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="16" Grid.RowSpan="2" HorizontalAlignment="Stretch" Margin="3">
+                <Button x:Name="FixMenuButton" HorizontalAlignment="Stretch" Click="FixMenuButton_Click" ToolTip="Các công cụ sửa lỗi và chuẩn hóa">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="AutoFix" VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                        <TextBlock Text="Công cụ Fix" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        <iconPacks:PackIconMaterial Kind="ChevronDown" Width="10" Height="10" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Click="FixHevaButton_Click" ToolTip="Sửa khối \heva{} hiện tại và tìm khối tiếp theo.">
+                                <MenuItem.Header>
+                                    <DockPanel>
+                                        <iconPacks:PackIconMaterial Kind="AutoFix" VerticalAlignment="Center" Margin="0,0,8,0" Width="14" Height="14"/>
+                                        <TextBlock Text="Sửa \heva{}"/>
+                                    </DockPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                            <MenuItem Click="FixEnumerateButton_Click" ToolTip="Chuyển đổi môi trường enumerate thành listEX trong các khối vd, vidu, ex, bt.">
+                                <MenuItem.Header>
+                                    <DockPanel>
+                                        <iconPacks:PackIconMaterial Kind="FormatListNumbered" VerticalAlignment="Center" Margin="0,0,8,0" Width="14" Height="14"/>
+                                        <TextBlock Text="Fix enumerate"/>
+                                    </DockPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                            <MenuItem Click="FixTikzpictureButton_Click" ToolTip="Chuẩn hóa các tùy chọn trong môi trường tikzpicture.">
+                                <MenuItem.Header>
+                                    <DockPanel>
+                                        <iconPacks:PackIconMaterial Kind="Drawing" VerticalAlignment="Center" Margin="0,0,8,0" Width="14" Height="14"/>
+                                        <TextBlock Text="Fix tikzpicture"/>
+                                    </DockPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                            <Separator Background="#FF555555"/>
+                            <MenuItem Command="local:CustomCommands.CleanupText" ToolTip="Dọn dẹp khoảng trắng, dấu câu...">
+                                <MenuItem.Header>
+                                    <DockPanel>
+                                        <iconPacks:PackIconMaterial Kind="Broom" VerticalAlignment="Center" Margin="0,0,8,0" Width="14" Height="14"/>
+                                        <TextBlock Text="Dọn dẹp văn bản"/>
+                                    </DockPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="17" Grid.RowSpan="2" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="InsertImageWizardButton_Click" ToolTip="Chèn hình ảnh nâng cao">
+                    <DockPanel VerticalAlignment="Center">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <iconPacks:PackIconMaterial Kind="ImagePlus" VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                            <TextBlock Text="Chèn ảnh" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Button>
+            </Grid>
+            <Grid Grid.Row="0" Grid.Column="18" Grid.RowSpan="2" HorizontalAlignment="Stretch" Margin="3">
+                <Button HorizontalAlignment="Stretch" Click="Ghepfile_Click" ToolTip="Chèn hình ảnh nâng cao">
+                    <DockPanel VerticalAlignment="Center">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <iconPacks:PackIconMaterial Kind="ImagePlus" VerticalAlignment="Center" HorizontalAlignment="Center" Width="20" Height="20"/>
+                            <TextBlock Text="Ghép file" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Button>
+            </Grid>
+        </Grid>
+        <avalonedit:TextEditor
+            Grid.Row="1"
+            x:Name="textEditor"
+            FontFamily="Tono Mono"
+            FontSize="12pt"
+            Background="#FF1E1E1E"
+            Foreground="#FFDCDCDC"
+            ShowLineNumbers="True"
+            Margin="0,5,0,0"
+            WordWrap="True"
+            >
+            <avalonedit:TextEditor.InputBindings>
+                <!-- Gán phím tắt Ctrl+W cho lệnh đóng tệp -->
+                <KeyBinding Command="{x:Static local:MainWindow.CloseTexCommand}"
+                            Key="W" Modifiers="Ctrl"/>
+
+                <!-- Gán phím tắt Ctrl+Shift+U cho lệnh viết hoa -->
+                <KeyBinding Command="avalonedit:AvalonEditCommands.ConvertToUppercase"
+                            Key="U" Modifiers="Ctrl+Shift"/>
+                <KeyBinding Command="local:CustomCommands.MathMode" Key="M" Modifiers="Ctrl"/>
+                <KeyBinding Command="local:CustomCommands.SpellCheck" Key="F7" Modifiers="Ctrl"/>
+                <KeyBinding Key="L" Modifiers="Ctrl" Command="local:CustomCommands.InsertLoigiai"/>
+                <KeyBinding Command="local:CustomCommands.ToggleComment" Key="T" Modifiers="Ctrl"/>
+                <KeyBinding Command="local:CustomCommands.ToggleComment" Key="U" Modifiers="Ctrl"/>
+                <KeyBinding Command="ApplicationCommands.Find" Key="F" Modifiers="Ctrl"/>
+                <KeyBinding Command="ApplicationCommands.Replace" Key="H" Modifiers="Ctrl"/>
+
+
+            </avalonedit:TextEditor.InputBindings>
+            <avalonedit:TextEditor.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Command="ApplicationCommands.Cut">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="ContentCut" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Cắt"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Command="ApplicationCommands.Copy">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="ContentCopy" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Sao chép"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Command="ApplicationCommands.Paste">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="ContentPaste" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Dán"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Command="avalonedit:AvalonEditCommands.ConvertToUppercase">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="FormatLetterCaseUpper" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Viết hoa"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Click="TitleCaseDang_Click">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="FormatTitle" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Viết hoa tiêu đề dạng toán"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Click="UppercaseSection_Click">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="FormatHeader1" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Viết hoa mục (section)"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Click="SortQuestions_Click">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="Sort" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Sắp xếp câu hỏi"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Command="local:CustomCommands.ToggleComment">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="CommentTextOutline" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Chuyển đổi Ghi chú"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Command="local:CustomCommands.CleanupText">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="Broom" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Dọn dẹp văn bản"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Click="LabelMenuItem_Click">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="Label" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Chèn \label{}"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Click="RefMenuItem_Click">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="Tag" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Chèn \ref{}"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <Separator Background="#FF555555"/>
+                    <MenuItem Command="ApplicationCommands.SelectAll">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="SelectAll" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Chọn tất cả"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <Separator Background="#FF555555"/>
+                    <MenuItem Click="ExpandAllFoldings_Click">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="ArrowExpandAll" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Mở tất cả"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem Click="CollapseAllFoldings_Click">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <iconPacks:PackIconMaterial Kind="ArrowCollapseAll" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Đóng tất cả"/>
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                </ContextMenu>
+            </avalonedit:TextEditor.ContextMenu>
+        </avalonedit:TextEditor>
+    </Grid>
+</Window>

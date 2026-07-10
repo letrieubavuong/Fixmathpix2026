@@ -1,0 +1,245 @@
+﻿<Window x:Class="FixMathpix2025.FindAndReplace"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FixMathpix2025"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        mc:Ignorable="d"
+        Title="Tìm kiếm và Thay thế"
+        Height="500" Width="620"
+        Background="#FF2D2D30" Foreground="White"
+        WindowStartupLocation="CenterScreen" AllowsTransparency="True"
+        ResizeMode="NoResize" WindowStyle="None" >
+
+    <Window.Resources>
+
+        <!-- STYLE BUTTON -->
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- EDITABLE COMBOBOX STYLE -->
+        <Style x:Key="DarkComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="IsEditable" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton
+                                x:Name="ToggleButton"
+                                ClickMode="Press"
+                                IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Focusable="False">
+
+                                <Grid>
+                                    <ContentPresenter
+                                        x:Name="ContentSite"
+                                        Margin="6,3,25,3"
+                                        Content="{TemplateBinding SelectionBoxItem}"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Left"
+                                        IsHitTestVisible="False"/>
+
+                                    <Path
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,8,0"
+                                        Data="M 0 0 L 4 4 L 8 0 Z"
+                                        Fill="White" />
+                                </Grid>
+                            </ToggleButton>
+
+                            <!-- Editable Textbox -->
+                            <TextBox
+                                x:Name="PART_EditableTextBox"
+                                Margin="4,3,25,3"
+                                Background="Transparent"
+                                Foreground="White"
+                                BorderThickness="0"
+                                CaretBrush="White"
+                                Visibility="Hidden" />
+
+                            <!-- DROPDOWN LIST -->
+                            <Popup
+                                x:Name="Popup"
+                                Placement="Bottom"
+                                IsOpen="{TemplateBinding IsDropDownOpen}"
+                                AllowsTransparency="True"
+                                Focusable="False">
+
+                                <Border
+                                    Background="#FF3F3F46"
+                                    BorderBrush="#FF555555"
+                                    BorderThickness="1">
+                                    <ScrollViewer Margin="4">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <!-- ENABLE TEXTBOX IN EDIT MODE -->
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="ContentSite" Property="Visibility" Value="Hidden"/>
+                            </Trigger>
+
+                            <Trigger SourceName="ToggleButton" Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ToggleButton" Property="Background" Value="#FF555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- COMBOBOX ITEMS -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Padding" Value="4,3"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Style.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter Property="Background" Value="#FF555555"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- TEXTBOX -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="Padding" Value="3"/>
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+
+        <!-- DATAGRID -->
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="#FF2D2D30"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#FF555555"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#FF555555"/>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#FF555555"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#FF3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        </Style>
+
+    </Window.Resources>
+
+
+    <!-- UI LAYOUT -->
+    <Grid Margin="10" MouseLeftButtonDown="Window_MouseLeftButtonDown">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- FIND / REPLACE -->
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Tìm kiếm:"/>
+            <ComboBox x:Name="FindComboBox" Style="{StaticResource DarkComboBoxStyle}" Margin="0,2,0,5"/>
+            <TextBlock Text="Thay thế bằng:"/>
+            <ComboBox x:Name="ReplaceComboBox" Style="{StaticResource DarkComboBoxStyle}" Margin="0,2,0,5"/>
+        </StackPanel>
+
+        <!-- OPTIONS -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5">
+            <CheckBox x:Name="MatchCaseCheckBox" Content="Phân biệt hoa/thường"/>
+            <CheckBox x:Name="WholeWordCheckBox" Content="Toàn bộ từ" Margin="15,0,0,0"/>
+            <CheckBox x:Name="RegexCheckBox" Content="Regex" Margin="15,0,0,0"/>
+        </StackPanel>
+
+        <!-- BUTTONS -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10">
+            <Button x:Name="FindNextButton" Content="Tìm tiếp" Width="80" Click="FindNextButton_Click"/>
+            <Button x:Name="ReplaceButton" Content="Thay thế" Width="80" Margin="5,0,0,0" Click="ReplaceButton_Click"/>
+            <Button x:Name="ReplaceAllButton" Content="Thay thế tất cả" Width="110" Margin="5,0,0,0" Click="ReplaceAllButton_Click"/>
+            <Button x:Name="SaveButton" Content="Lưu" Width="60" Margin="15,0,0,0" Click="SaveButton_Click"/>
+            <Button x:Name="CloseButton" Content="Đóng" Width="60" Margin="15,0,0,0" Click="CloseButton_Click"/>
+        </StackPanel>
+
+        <Separator Grid.Row="3" Margin="0,8"/>
+
+        <!-- HISTORY GRID -->
+        <DataGrid Grid.Row="4" x:Name="SearchHistoryGrid" Margin="0,10,0,0"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  MouseDoubleClick="SearchHistoryGrid_MouseDoubleClick">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Tìm kiếm" Binding="{Binding FindText}" Width="*"/>
+                <DataGridTextColumn Header="Thay thế" Binding="{Binding ReplaceText}" Width="*"/>
+                <DataGridCheckBoxColumn Header="Aa" Binding="{Binding MatchCase}" Width="35"/>
+                <DataGridCheckBoxColumn Header="W" Binding="{Binding WholeWord}" Width="35"/>
+                <DataGridCheckBoxColumn Header=".*" Binding="{Binding UseRegex}" Width="35"/>
+
+                <DataGridTemplateColumn Width="40">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Click="DeleteButton_Click" Background="Transparent" BorderThickness="0">
+                                <iconPacks:PackIconMaterial Kind="Delete" Foreground="IndianRed"/>
+                            </Button>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+
+        </DataGrid>
+    </Grid>
+</Window>

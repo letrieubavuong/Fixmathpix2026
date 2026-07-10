@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="LaTeX" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- Định nghĩa các màu sắc cho từng loại cú pháp -->
+  <Color name="Comment" foreground="#FF6A9955" /> <!-- Màu xanh lá cây cho bình luận -->
+  <Color name="Command" foreground="#FF569CD6" /> <!-- Màu xanh dương cho lệnh LaTeX -->
+  <Color name="Environment" foreground="#FFC586C0" /> <!-- Màu tím cho môi trường -->
+  <Color name="Math" foreground="#FFDCDCAA" /> <!-- Màu vàng nhạt cho nội dung toán học -->
+  <Color name="Argument" foreground="#FF9CDCFE" /> <!-- Màu xanh nhạt cho đối số -->
+  <Color name="Option" foreground="#FFB5CEA8" /> <!-- Màu xanh lá cây nhạt cho tùy chọn -->
+  <Color name="String" foreground="#FFCE9178" /> <!-- Màu cam cho chuỗi (ít dùng trong LaTeX) -->
+  <Color name="Number" foreground="#FFB5CEA8" /> <!-- Màu xanh lá cây nhạt cho số -->
+  <Color name="Error" foreground="#FFF44747" /> <!-- Màu đỏ cho lỗi (nếu có) -->
+
+  <RuleSet>
+    <!-- Bình luận LaTeX: bắt đầu bằng % và kết thúc bằng ký tự xuống dòng -->
+    <Span color="Comment" begin="%" end="$" />
+
+    <!-- Lệnh LaTeX: bắt đầu bằng "\" theo sau là chữ cái hoặc một ký tự không phải chữ cái -->
+    <Rule color="Command">
+      \\[a-zA-Z]+
+    </Rule>
+    <Rule color="Command">
+      \\[^a-zA-Z]
+    </Rule>
+
+    <!-- Môi trường LaTeX: \begin{...} và \end{...} -->
+    <Span color="Environment" begin="\\begin\{" end="\}" />
+    <Span color="Environment" begin="\\end\{" end="\}" />
+
+    <!-- Chế độ toán học: $...$, $$...$$, \[...\], \(...\) -->
+    <Span color="Math" begin="\$" end="\$" />
+    <Span color="Math" begin="\$\$" end="\$\$" />
+    <Span color="Math" begin="\\\[" end="\\\]" />
+    <Span color="Math" begin="\\\(" end="\\\)" />
+
+    <!-- Đối số trong dấu ngoặc nhọn {} -->
+    <!-- Lưu ý: Quy tắc này có thể tô sáng quá rộng nếu dấu {} được dùng cho mục đích khác -->
+    <Span color="Argument" begin="\{" end="\}" />
+
+    <!-- Tùy chọn trong dấu ngoặc vuông [] -->
+    <Span color="Option" begin="\[" end="\]" />
+
+    <!-- Số: số nguyên, số thập phân, số mũ -->
+    <Rule color="Number">
+      \b\d+(\.\d*)?([eE][+-]?\d+)?\b
+    </Rule>
+
+    <!-- Các từ khóa lệnh LaTeX phổ biến -->
+    <Keywords color="Command">
+      <Word>documentclass</Word>
+      <Word>usepackage</Word>
+      <Word>begin</Word>
+      <Word>end</Word>
+      <Word>section</Word>
+      <Word>subsection</Word>
+      <Word>subsubsection</Word>
+      <Word>chapter</Word>
+      <Word>part</Word>
+      <Word>label</Word>
+      <Word>ref</Word>
+      <Word>cite</Word>
+      <Word>textbf</Word>
+      <Word>textit</Word>
+      <Word>underline</Word>
+      <Word>emph</Word>
+      <Word>item</Word>
+      <Word>maketitle</Word>
+      <Word>tableofcontents</Word>
+      <Word>listoffigures</Word>
+      <Word>listoftables</Word>
+      <Word>appendix</Word>
+      <Word>newpage</Word>
+      <Word>clearpage</Word>
+      <Word>include</Word>
+      <Word>input</Word>
+      <Word>includegraphics</Word>
+      <Word>caption</Word>
+      <Word>figure</Word>
+      <Word>table</Word>
+      <Word>equation</Word>
+      <Word>align</Word>
+      <Word>array</Word>
+      <Word>matrix</Word>
+      <Word>text</Word>
+      <Word>frac</Word>
+      <Word>sqrt</Word>
+      <Word>sum</Word>
+      <Word>int</Word>
+      <!-- Các ký tự Hy Lạp phổ biến -->
+      <Word>alpha</Word>
+      <Word>beta</Word>
+      <Word>gamma</Word>
+      <Word>delta</Word>
+      <Word>epsilon</Word>
+      <Word>zeta</Word>
+      <Word>eta</Word>
+      <Word>theta</Word>
+      <Word>iota</Word>
+      <Word>kappa</Word>
+      <Word>lambda</Word>
+      <Word>mu</Word>
+      <Word>nu</Word>
+      <Word>xi</Word>
+      <Word>pi</Word>
+      <Word>rho</Word>
+      <Word>sigma</Word>
+      <Word>tau</Word>
+      <Word>upsilon</Word>
+      <Word>phi</Word>
+      <Word>chi</Word>
+      <Word>psi</Word>
+      <Word>omega</Word>
+    </Keywords>
+  </RuleSet>
+</SyntaxDefinition>
