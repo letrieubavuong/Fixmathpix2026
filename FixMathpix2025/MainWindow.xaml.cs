@@ -75,6 +75,10 @@ namespace FixMathpix2025
 
             // Khởi tạo chức năng folding
             InitializeFolding();
+
+            // Đăng ký sự kiện cập nhật trạng thái con trỏ và tệp trên StatusBar
+            textEditor.TextArea.Caret.PositionChanged += Caret_PositionChanged;
+            UpdateStatusBarFile();
         }
 
         private void AutoCloseEnvironment()
@@ -1036,6 +1040,7 @@ namespace FixMathpix2025
                     Directory.CreateDirectory(directory);
                 }
                 File.WriteAllText(_autoSaveFilePath, textEditor.Document.Text);
+                StatusMessageTextBlock.Text = "Đã tự động lưu nháp lúc " + DateTime.Now.ToString("HH:mm:ss");
             }
             catch (Exception)
             {
@@ -1631,6 +1636,8 @@ namespace FixMathpix2025
                     _currentFilePath = openFileDialog.FileName;
                     StartWatchingFile(_currentFilePath); // Bắt đầu theo dõi tệp mới
                     this.Title = $"FixMathpix 2025 - {_currentFilePath}";
+                    UpdateStatusBarFile();
+                    StatusMessageTextBlock.Text = "Đã mở tệp thành công";
                 }
                 catch (Exception ex)
                 {
@@ -1652,7 +1659,7 @@ namespace FixMathpix2025
                     _isSaving = true; // Đặt cờ trước khi lưu
                     File.WriteAllText(_currentFilePath, textEditor.Text);
                     _lastFileWriteTime = File.GetLastWriteTimeUtc(_currentFilePath); // Cập nhật thời gian sau khi lưu
-                    MessageBox.Show("Đã lưu tệp thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                    StatusMessageTextBlock.Text = "Đã lưu tệp thành công";
                 }
                 catch (Exception ex)
                 {
@@ -1684,7 +1691,8 @@ namespace FixMathpix2025
                     StartWatchingFile(_currentFilePath); // Bắt đầu theo dõi tệp mới
                     this.Title = $"FixMathpix 2025 - {_currentFilePath}";
                     _lastFileWriteTime = File.GetLastWriteTimeUtc(_currentFilePath); // Cập nhật thời gian
-                    MessageBox.Show("Đã lưu tệp thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                    UpdateStatusBarFile();
+                    StatusMessageTextBlock.Text = "Đã lưu tệp mới thành công";
                 }
                 catch (Exception ex)
                 {
@@ -1741,9 +1749,29 @@ namespace FixMathpix2025
 
             // Cập nhật tiêu đề cửa sổ
             this.Title = "FixMathpix 2025";
+            UpdateStatusBarFile();
+            StatusMessageTextBlock.Text = "Đã đóng tệp";
+        }
 
-            // Có thể thêm thông báo cho người dùng nếu muốn
-            // MessageBox.Show("Đã đóng tệp.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+        private void UpdateStatusBarFile()
+        {
+            if (FilePathTextBlock != null)
+            {
+                FilePathTextBlock.Text = string.IsNullOrEmpty(_currentFilePath) ? "Chưa mở tệp nào" : _currentFilePath;
+            }
+        }
+
+        private void Caret_PositionChanged(object sender, EventArgs e)
+        {
+            if (CaretPositionTextBlock != null && textEditor != null && textEditor.TextArea != null && textEditor.TextArea.Caret != null)
+            {
+                CaretPositionTextBlock.Text = $"Ln {textEditor.TextArea.Caret.Line}, Col {textEditor.TextArea.Caret.Column}";
+            }
+        }
+
+        private void Exit_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
         }
 
         private void TitleCaseDang_Click(object sender, RoutedEventArgs e)
