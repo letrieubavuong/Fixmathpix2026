@@ -200,9 +200,24 @@
                 <MenuItem Command="ApplicationCommands.Copy" Header="_Sao chép"/>
                 <MenuItem Command="ApplicationCommands.Paste" Header="_Dán"/>
                 <Separator Background="#FF555555"/>
-                <MenuItem Command="ApplicationCommands.Find" Header="_Tìm kiếm..."/>
-                <MenuItem Command="ApplicationCommands.Replace" Header="Th_ay thế..."/>
+                <MenuItem Command="ApplicationCommands.Find" Header="_Tìm kiếm (Ctrl+F)">
+                    <MenuItem.Icon>
+                        <iconPacks:PackIconMaterial Kind="Magnify" Width="14" Height="14" VerticalAlignment="Center"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Command="ApplicationCommands.Replace" Header="Th_ay thế (Ctrl+H)"/>
                 <MenuItem Command="local:CustomCommands.GoToLine" Header="Đi _tới dòng..."/>
+                <Separator Background="#FF555555"/>
+                <MenuItem Command="local:CustomCommands.SpellCheck" Header="_Soát lỗi chính tả (Ctrl+F7)">
+                    <MenuItem.Icon>
+                        <iconPacks:PackIconMaterial Kind="Spellcheck" Width="14" Height="14" VerticalAlignment="Center"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Click="ManageSpellingButton_Click" Header="Quản lý _từ điển lỗi...">
+                    <MenuItem.Icon>
+                        <iconPacks:PackIconMaterial Kind="BookEditOutline" Width="14" Height="14" VerticalAlignment="Center"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator Background="#FF555555"/>
                 <MenuItem Command="ApplicationCommands.SelectAll" Header="Chọ_n tất cả"/>
             </MenuItem>
@@ -231,16 +246,6 @@
                         <iconPacks:PackIconMaterial Kind="Run" Width="14" Height="14" VerticalAlignment="Center"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Command="local:CustomCommands.SpellCheck" Header="Soát lỗi chính tả">
-                    <MenuItem.Icon>
-                        <iconPacks:PackIconMaterial Kind="Spellcheck" Width="14" Height="14" VerticalAlignment="Center"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Click="ManageSpellingButton_Click" Header="Quản lý lỗi chính tả...">
-                    <MenuItem.Icon>
-                        <iconPacks:PackIconMaterial Kind="BookEditOutline" Width="14" Height="14" VerticalAlignment="Center"/>
-                    </MenuItem.Icon>
-                </MenuItem>
                 <MenuItem Command="local:CustomCommands.CleanupText" Header="Dọn dẹp văn bản">
                     <MenuItem.Icon>
                         <iconPacks:PackIconMaterial Kind="Broom" Width="14" Height="14" VerticalAlignment="Center"/>
@@ -264,29 +269,7 @@
         <!-- 2. Thanh công cụ responsive (WrapPanel) -->
         <Border Grid.Row="1" Background="#FF2D2D30" BorderThickness="0,0,0,1" BorderBrush="#FF555555" Padding="5,2">
             <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- Group 1: File Operations -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="OpenFileButton" Command="ApplicationCommands.Open" ToolTip="Mở một tệp TeX từ máy tính của bạn (Ctrl+O)." Margin="2" Padding="6,3" Style="{StaticResource CenterAlignedButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="FolderOpenOutline" Width="14" Height="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="Mở TeX" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="SaveFileButton" Command="ApplicationCommands.Save" ToolTip="Lưu tệp TeX hiện tại (Ctrl+S)." Margin="2" Padding="6,3" Style="{StaticResource CenterAlignedButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="ContentSave" Width="14" Height="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="Lưu TeX" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="CloseFileButton" Click="CloseFile_Click" ToolTip="Đóng tệp hiện tại." Margin="2" Padding="6,3" Style="{StaticResource CenterAlignedButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="FileRemoveOutline" Width="14" Height="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="Đóng" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
 
-                <Border Width="1" Background="#FF555555" Margin="6,4" Height="22" VerticalAlignment="Center"/>
 
                 <!-- Group 2: Text Formatting -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -394,30 +377,12 @@
 
                 <Border Width="1" Background="#FF555555" Margin="6,4" Height="22" VerticalAlignment="Center"/>
 
-                <!-- Group 6: Converters & Tools -->
+                <!-- Group 6: Core Converter -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="ChuyenTeXButton" Click="ChuyenTeXButton_Click" ToolTip="Chuyển đổi văn bản TeX sang chuẩn (ChuyenTeX)." Margin="2" Padding="6,3" Style="{StaticResource CenterAlignedButton}">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="Run" Width="14" Height="14" VerticalAlignment="Center" Foreground="#FF007ACC"/>
                             <TextBlock Text="Chuyển TeX" FontWeight="SemiBold" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="FindReplaceButton" Click="FindReplaceButton_Click" ToolTip="Tìm kiếm và Thay thế (Ctrl+F / Ctrl+H)" Margin="2" Padding="6,3" Style="{StaticResource CenterAlignedButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="Magnify" Width="14" Height="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="Tìm kiếm" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="SpellCheckButton" ToolTip="Soát lỗi chính tả (Ctrl+F7)." Command="local:CustomCommands.SpellCheck" Margin="2" Padding="6,3" Style="{StaticResource CenterAlignedButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="Spellcheck" Width="14" Height="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="Soát lỗi" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="ManageSpellingButton" Click="ManageSpellingButton_Click" ToolTip="Quản lý từ điển lỗi chính tả." Margin="2" Padding="6,3" Style="{StaticResource CenterAlignedButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="BookEditOutline" Width="14" Height="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="Từ điển" Margin="5,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -584,9 +549,6 @@
                             <iconPacks:PackIconMaterial Kind="FileMultipleOutline" Width="12" Height="12" VerticalAlignment="Center"/>
                             <TextBlock Text="Ghép file" Margin="4,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
-                    </Button>
-                    <Button Click="SettingsButton_Click" ToolTip="Cài đặt cấu hình" Margin="2" Padding="6,3">
-                        <iconPacks:PackIconMaterial Kind="Cog" Width="14" Height="14" VerticalAlignment="Center"/>
                     </Button>
                 </StackPanel>
             </WrapPanel>
