@@ -978,27 +978,31 @@ namespace FixMathpix2025
             UpdateAutoSaveRegistration();
 
             // Apply dynamic shortcuts to InputBindings
-            if (settings.Shortcuts != null && settings.Shortcuts.Count > 0)
+            var shortcutsToApply = settings.Shortcuts ?? DefaultEditorShortcuts.GetDefaultShortcuts();
+            if (shortcutsToApply != null && shortcutsToApply.Count > 0)
             {
                 var converter = new KeyGestureConverter();
-                foreach (var kvp in settings.Shortcuts)
+                foreach (var kvp in shortcutsToApply)
                 {
-                    if (string.IsNullOrWhiteSpace(kvp.Value)) continue;
-                    try
+                    ICommand targetCmd = GetCommandByName(kvp.Key);
+                    if (targetCmd != null)
                     {
-                        var gesture = (KeyGesture)converter.ConvertFromString(kvp.Value);
-                        ICommand targetCmd = GetCommandByName(kvp.Key);
-                        if (targetCmd != null)
+                        var oldBindings = textEditor.InputBindings.OfType<KeyBinding>().Where(kb => kb.Command == targetCmd).ToList();
+                        foreach (var oldB in oldBindings)
                         {
-                            var oldBindings = textEditor.InputBindings.OfType<KeyBinding>().Where(kb => kb.Command == targetCmd).ToList();
-                            foreach (var oldB in oldBindings)
+                            textEditor.InputBindings.Remove(oldB);
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(kvp.Value))
+                        {
+                            try
                             {
-                                textEditor.InputBindings.Remove(oldB);
+                                var gesture = (KeyGesture)converter.ConvertFromString(kvp.Value);
+                                textEditor.InputBindings.Add(new KeyBinding(targetCmd, gesture));
                             }
-                            textEditor.InputBindings.Add(new KeyBinding(targetCmd, gesture));
+                            catch { }
                         }
                     }
-                    catch { }
                 }
             }
         }

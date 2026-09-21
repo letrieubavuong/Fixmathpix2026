@@ -12,7 +12,7 @@ namespace FixMathpix2025
         public int AutoSaveIntervalSeconds { get; set; } = 2;
         public bool IsAutoSaveEnabled { get; set; } = true;
         public Dictionary<string, string> HighlightingColors { get; set; } = new Dictionary<string, string>();
-        public Dictionary<string, string> Shortcuts { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> Shortcuts { get; set; } = DefaultEditorShortcuts.GetDefaultShortcuts();
 
         private static string GetSettingsFilePath()
         {

@@ -1,0 +1,33 @@
+name: Build & Test CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Restore NuGet packages
+      run: nuget restore FixMathpix2025.sln
+
+    - name: Build Debug
+      run: msbuild FixMathpix2025.sln /p:Configuration=Debug /p:Platform="Any CPU" /t:Rebuild
+
+    - name: Build Release
+      run: msbuild FixMathpix2025.sln /p:Configuration=Release /p:Platform="Any CPU" /t:Rebuild
+
+    - name: Run Unit Tests
+      run: dotnet test FixMathpix2025.Tests/FixMathpix2025.Tests.csproj --no-build -c Release

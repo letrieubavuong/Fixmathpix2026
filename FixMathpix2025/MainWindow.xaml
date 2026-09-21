@@ -598,12 +598,6 @@
                 <!-- Gán phím tắt Ctrl+Shift+U cho lệnh viết hoa -->
                 <KeyBinding Command="avalonedit:AvalonEditCommands.ConvertToUppercase"
                             Key="U" Modifiers="Ctrl+Shift"/>
-                <KeyBinding Command="local:CustomCommands.MathMode" Key="M" Modifiers="Ctrl"/>
-                <KeyBinding Command="local:CustomCommands.SpellCheck" Key="F7" Modifiers="Ctrl"/>
-                <KeyBinding Key="L" Modifiers="Ctrl" Command="local:CustomCommands.InsertLoigiai"/>
-                <KeyBinding Command="local:CustomCommands.ToggleComment" Key="T" Modifiers="Ctrl"/>
-                <KeyBinding Command="ApplicationCommands.Find" Key="F" Modifiers="Ctrl"/>
-                <KeyBinding Command="ApplicationCommands.Replace" Key="H" Modifiers="Ctrl"/>
             </avalonedit:TextEditor.InputBindings>
             <avalonedit:TextEditor.ContextMenu>
                 <ContextMenu>

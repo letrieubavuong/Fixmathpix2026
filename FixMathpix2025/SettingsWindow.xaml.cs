@@ -180,84 +180,62 @@ namespace FixMathpix2025
             }
         }
 
+        private static readonly Dictionary<string, string> FunctionNames = new Dictionary<string, string>
+        {
+            { "ApplicationCommands.Open", "Mở tệp" },
+            { "ApplicationCommands.Save", "Lưu tệp" },
+            { "ApplicationCommands.Find", "Tìm kiếm" },
+            { "ApplicationCommands.Replace", "Thay thế" },
+            { "local:CustomCommands.Bold", "In đậm" },
+            { "local:CustomCommands.Italic", "In nghiêng" },
+            { "local:CustomCommands.Underline", "Gạch chân" },
+            { "avalonedit:AvalonEditCommands.ConvertToUppercase", "Viết hoa" },
+            { "local:CustomCommands.ToggleComment", "Chuyển đổi Ghi chú" },
+            { "local:CustomCommands.MathMode", "Chế độ toán học ($...$)" },
+            { "local:CustomCommands.InsertLoigiai", "Chèn Lời giải" },
+            { "local:CustomCommands.SpellCheck", "Soát lỗi chính tả" },
+            { "local:CustomCommands.CleanupText", "Dọn dẹp văn bản" }
+        };
+
         private List<ShortcutSetting> GetDefaultShortcuts()
         {
-            // Danh sách này nên được duy trì để khớp với các lệnh trong ứng dụng
-            return new List<ShortcutSetting>
+            var list = new List<ShortcutSetting>();
+            foreach (var kvp in DefaultEditorShortcuts.GetDefaultShortcuts())
             {
-                new ShortcutSetting { FunctionName = "Mở tệp", CommandName = "ApplicationCommands.Open", KeyGesture = "Ctrl+O" },
-                new ShortcutSetting { FunctionName = "Lưu tệp", CommandName = "ApplicationCommands.Save", KeyGesture = "Ctrl+S" },
-                new ShortcutSetting { FunctionName = "Tìm kiếm", CommandName = "ApplicationCommands.Find", KeyGesture = "Ctrl+F" },
-                new ShortcutSetting { FunctionName = "Thay thế", CommandName = "ApplicationCommands.Replace", KeyGesture = "Ctrl+H" },
-                new ShortcutSetting { FunctionName = "In đậm", CommandName = "local:CustomCommands.Bold", KeyGesture = "Ctrl+B" },
-                new ShortcutSetting { FunctionName = "In nghiêng", CommandName = "local:CustomCommands.Italic", KeyGesture = "Ctrl+I" },
-                new ShortcutSetting { FunctionName = "Gạch chân", CommandName = "local:CustomCommands.Underline", KeyGesture = "Ctrl+U" },
-                new ShortcutSetting { FunctionName = "Viết hoa", CommandName = "avalonedit:AvalonEditCommands.ConvertToUppercase", KeyGesture = "Ctrl+Shift+U" },
-                new ShortcutSetting { FunctionName = "Chuyển đổi Ghi chú", CommandName = "local:CustomCommands.ToggleComment", KeyGesture = "Ctrl+/" },
-                new ShortcutSetting { FunctionName = "Chế độ toán học ($...$)", CommandName = "local:CustomCommands.MathMode", KeyGesture = "Ctrl+M" },
-                new ShortcutSetting { FunctionName = "Chèn Lời giải", CommandName = "local:CustomCommands.InsertLoigiai", KeyGesture = "Ctrl+L" },
-                new ShortcutSetting { FunctionName = "Soát lỗi chính tả", CommandName = "local:CustomCommands.SpellCheck", KeyGesture = "Ctrl+F7" },
-                new ShortcutSetting { FunctionName = "Dọn dẹp văn bản", CommandName = "local:CustomCommands.CleanupText", KeyGesture = "Ctrl+Alt+L" }
-            };
+                string fnName = FunctionNames.TryGetValue(kvp.Key, out string name) ? name : kvp.Key;
+                list.Add(new ShortcutSetting { CommandName = kvp.Key, FunctionName = fnName, KeyGesture = kvp.Value });
+            }
+            return list;
         }
 
         private bool TryApplySettings()
         {
-            // Lấy giá trị từ UI
-            if (FontFamilyComboBox.SelectedItem is FontFamily selectedFont)
+            var candidate = new EditorSettings
             {
-                _currentSettings.FontFamily = selectedFont.Source;
+                FontFamily = (FontFamilyComboBox.SelectedItem is FontFamily selectedFont) ? selectedFont.Source : _currentSettings.FontFamily,
+                FontSize = double.TryParse(FontSizeComboBox.Text, out double newSize) ? newSize : _currentSettings.FontSize,
+                IsAutoSaveEnabled = AutoSaveCheckBox.IsChecked ?? true,
+                AutoSaveIntervalSeconds = (int.TryParse(AutoSaveIntervalComboBox.Text, out int newInterval) && newInterval > 0) ? newInterval : _currentSettings.AutoSaveIntervalSeconds,
+                HighlightingColors = HighlightingColors != null ? HighlightingColors.ToDictionary(c => c.Name, c => c.ColorHex) : new Dictionary<string, string>(_currentSettings.HighlightingColors),
+                Shortcuts = Shortcuts != null ? Shortcuts.ToDictionary(s => s.CommandName, s => s.KeyGesture ?? "") : new Dictionary<string, string>(_currentSettings.Shortcuts)
+            };
+
+            // Validate colors
+            if (!SettingsValidator.ValidateHighlightingColors(candidate.HighlightingColors, out string colorError))
+            {
+                MessageBox.Show(this, colorError, "Lỗi màu sắc", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
 
-            if (double.TryParse(FontSizeComboBox.Text, out double newSize))
+            // Validate shortcuts
+            if (!SettingsValidator.ValidateShortcuts(candidate.Shortcuts, out string shortcutError))
             {
-                _currentSettings.FontSize = newSize;
-            }
-
-            // Auto-save
-            _currentSettings.IsAutoSaveEnabled = AutoSaveCheckBox.IsChecked ?? true;
-
-            if (int.TryParse(AutoSaveIntervalComboBox.Text, out int newInterval) && newInterval > 0)
-            {
-                _currentSettings.AutoSaveIntervalSeconds = newInterval;
-            }
-
-            var tempHighlightingColors = new Dictionary<string, string>();
-            if (HighlightingColors != null)
-            {
-                var colorDict = HighlightingColors.ToDictionary(c => c.Name, c => c.ColorHex);
-                if (!SettingsValidator.ValidateHighlightingColors(colorDict, out string colorError))
-                {
-                    MessageBox.Show(colorError, "Lỗi màu sắc", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false;
-                }
-                foreach (var kvp in colorDict)
-                {
-                    tempHighlightingColors[kvp.Key] = kvp.Value;
-                }
-            }
-
-            // Shortcuts
-            if (Shortcuts != null)
-            {
-                var shortcutDict = Shortcuts.Where(s => !string.IsNullOrWhiteSpace(s.KeyGesture))
-                                            .ToDictionary(s => s.CommandName, s => s.KeyGesture);
-                if (!SettingsValidator.ValidateShortcuts(shortcutDict, out string shortcutError))
-                {
-                    MessageBox.Show(this, shortcutError, "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false;
-                }
-            }
-
-            ValidateAndHighlightDuplicates();
-            if (Shortcuts != null && Shortcuts.Any(s => s.IsDuplicate))
-            {
-                MessageBox.Show(this, "Có phím tắt bị trùng lặp.", "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(this, shortcutError, "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
 
             ValidateAndHighlightDuplicates();
-            if (Shortcuts.Any(s => s.IsDuplicate))
+            if (Shortcuts != null && Shortcuts.Any(s => s.IsDuplicate))
             {
                 var duplicates = Shortcuts.Where(s => s.IsDuplicate)
                                           .GroupBy(s => s.KeyGesture)
@@ -271,27 +249,11 @@ namespace FixMathpix2025
                     errorBuilder.AppendLine($"  - Phím tắt '{group.Key}' được gán cho các chức năng: {string.Join(", ", functionNames)}");
                 }
                 MessageBox.Show(this, errorBuilder.ToString(), "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false; // Ngăn không cho áp dụng cài đặt
+                return false;
             }
 
-            // --- Save highlighting colors if valid ---
-            _currentSettings.HighlightingColors.Clear();
-            foreach (var kvp in tempHighlightingColors)
-            {
-                _currentSettings.HighlightingColors[kvp.Key] = kvp.Value;
-            }
-
-            // --- Save shortcuts if validation passes ---
-            _currentSettings.Shortcuts.Clear();
-            if (Shortcuts != null)
-            {
-                foreach (var shortcut in Shortcuts)
-                {
-                    _currentSettings.Shortcuts[shortcut.CommandName] = shortcut.KeyGesture;
-                }
-            }
-
-            // Áp dụng cho MainWindow
+            // Validated! Commit candidate to current settings
+            _currentSettings = candidate;
             _mainWindow.ApplySettings(_currentSettings);
             return true;
         }

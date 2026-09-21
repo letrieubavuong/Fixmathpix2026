@@ -100,8 +100,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AutoSaveRegistrationTracker.cs" />
     <Compile Include="BracketMismatchError.cs" />
     <Compile Include="CustomCommands.cs" />
+    <Compile Include="DefaultEditorShortcuts.cs" />
     <Compile Include="EditorSettings.cs" />
     <Compile Include="GoToLineDialog.xaml.cs">
       <DependentUpon>GoToLineDialog.xaml</DependentUpon>
