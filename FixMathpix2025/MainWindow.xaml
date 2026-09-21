@@ -602,7 +602,6 @@
                 <KeyBinding Command="local:CustomCommands.SpellCheck" Key="F7" Modifiers="Ctrl"/>
                 <KeyBinding Key="L" Modifiers="Ctrl" Command="local:CustomCommands.InsertLoigiai"/>
                 <KeyBinding Command="local:CustomCommands.ToggleComment" Key="T" Modifiers="Ctrl"/>
-                <KeyBinding Command="local:CustomCommands.ToggleComment" Key="U" Modifiers="Ctrl"/>
                 <KeyBinding Command="ApplicationCommands.Find" Key="F" Modifiers="Ctrl"/>
                 <KeyBinding Command="ApplicationCommands.Replace" Key="H" Modifiers="Ctrl"/>
             </avalonedit:TextEditor.InputBindings>

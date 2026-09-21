@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -224,51 +225,35 @@ namespace FixMathpix2025
             var tempHighlightingColors = new Dictionary<string, string>();
             if (HighlightingColors != null)
             {
-                foreach (var colorVm in HighlightingColors)
+                var colorDict = HighlightingColors.ToDictionary(c => c.Name, c => c.ColorHex);
+                if (!SettingsValidator.ValidateHighlightingColors(colorDict, out string colorError))
                 {
-                    try
-                    {
-                        // Validate hex color
-                        ColorConverter.ConvertFromString(colorVm.ColorHex);
-                        tempHighlightingColors[colorVm.Name] = colorVm.ColorHex;
-                    }
-                    catch (FormatException)
-                    {
-                        MessageBox.Show($"Mã màu không hợp lệ cho '{colorVm.Name}': {colorVm.ColorHex}", "Lỗi màu sắc", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return false; // Ngăn không cho áp dụng nếu có lỗi
-                    }
+                    MessageBox.Show(colorError, "Lỗi màu sắc", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
+                foreach (var kvp in colorDict)
+                {
+                    tempHighlightingColors[kvp.Key] = kvp.Value;
                 }
             }
 
             // Shortcuts
-            // --- Validation for duplicate shortcuts ---
-            var shortcutMap = new Dictionary<string, List<string>>();
             if (Shortcuts != null)
             {
-                foreach (var shortcut in Shortcuts)
+                var shortcutDict = Shortcuts.Where(s => !string.IsNullOrWhiteSpace(s.KeyGesture))
+                                            .ToDictionary(s => s.CommandName, s => s.KeyGesture);
+                if (!SettingsValidator.ValidateShortcuts(shortcutDict, out string shortcutError))
                 {
-                    if (!string.IsNullOrWhiteSpace(shortcut.KeyGesture))
-                    {
-                        if (!shortcutMap.ContainsKey(shortcut.KeyGesture))
-                        {
-                            shortcutMap[shortcut.KeyGesture] = new List<string>();
-                        }
-                        shortcutMap[shortcut.KeyGesture].Add($"'{shortcut.FunctionName}'");
-                    }
+                    MessageBox.Show(this, shortcutError, "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
                 }
+            }
 
-                var duplicates = shortcutMap.Where(kvp => kvp.Value.Count > 1).ToList();
-                if (duplicates.Any())
-                {
-                    var errorBuilder = new System.Text.StringBuilder();
-                    errorBuilder.AppendLine("Không thể lưu cài đặt do có phím tắt bị trùng lặp:");
-                    foreach (var duplicate in duplicates)
-                    {
-                        errorBuilder.AppendLine($"  - Phím tắt '{duplicate.Key}' được gán cho các chức năng: {string.Join(", ", duplicate.Value)}");
-                    }
-                    MessageBox.Show(this, errorBuilder.ToString(), "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false; // Ngăn không cho áp dụng cài đặt
-                }
+            ValidateAndHighlightDuplicates();
+            if (Shortcuts != null && Shortcuts.Any(s => s.IsDuplicate))
+            {
+                MessageBox.Show(this, "Có phím tắt bị trùng lặp.", "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
 
             ValidateAndHighlightDuplicates();
@@ -433,5 +418,62 @@ namespace FixMathpix2025
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+    }
+
+    public static class SettingsValidator
+    {
+        public static bool ValidateHighlightingColors(IEnumerable<KeyValuePair<string, string>> colors, out string errorMessage)
+        {
+            errorMessage = null;
+            if (colors != null)
+            {
+                foreach (var kvp in colors)
+                {
+                    try
+                    {
+                        ColorConverter.ConvertFromString(kvp.Value);
+                    }
+                    catch
+                    {
+                        errorMessage = $"Mã màu không hợp lệ cho '{kvp.Key}': {kvp.Value}";
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        public static bool ValidateShortcuts(IEnumerable<KeyValuePair<string, string>> shortcuts, out string errorMessage)
+        {
+            errorMessage = null;
+            if (shortcuts != null)
+            {
+                var gestureMap = new Dictionary<string, List<string>>();
+                foreach (var kvp in shortcuts)
+                {
+                    if (!string.IsNullOrWhiteSpace(kvp.Value))
+                    {
+                        if (!gestureMap.ContainsKey(kvp.Value))
+                        {
+                            gestureMap[kvp.Value] = new List<string>();
+                        }
+                        gestureMap[kvp.Value].Add(kvp.Key);
+                    }
+                }
+
+                var duplicates = gestureMap.Where(kvp => kvp.Value.Count > 1).ToList();
+                if (duplicates.Any())
+                {
+                    var sb = new StringBuilder("Phím tắt trùng lặp: ");
+                    foreach (var dup in duplicates)
+                    {
+                        sb.Append($"[{dup.Key}: {string.Join(", ", dup.Value)}] ");
+                    }
+                    errorMessage = sb.ToString().Trim();
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 }
