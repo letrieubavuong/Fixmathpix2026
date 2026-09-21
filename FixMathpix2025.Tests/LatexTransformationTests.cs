@@ -141,6 +141,16 @@ namespace FixMathpix2025.Tests
         }
 
         [Fact]
+        public void FormatListEX_ExactOutputTest()
+        {
+            string input = "a. Item A\nb) Item B\n- Item C";
+            string expected = $"\\begin{{listEX}}[2]{System.Environment.NewLine}\\item Item A{System.Environment.NewLine}\\item Item B{System.Environment.NewLine}\\item Item C{System.Environment.NewLine}\\end{{listEX}}";
+            string result = LatexTransformationService.FormatListEX(input, "2");
+
+            Assert.Equal(expected, result);
+        }
+
+        [Fact]
         public void FormatEnumEX_ShouldFormatSelectedLines()
         {
             string input = "1. Item 1\n2) Item 2";
@@ -150,6 +160,16 @@ namespace FixMathpix2025.Tests
             Assert.Contains("\\item Item 1", result);
             Assert.Contains("\\item Item 2", result);
             Assert.EndsWith("\\end{enumEX}", result);
+        }
+
+        [Fact]
+        public void FormatEnumEX_ExactOutputTest()
+        {
+            string input = "1. Item 1\n2) Item 2";
+            string expected = $"\\begin{{enumEX}}[1.]{{3}}{System.Environment.NewLine}\\item Item 1{System.Environment.NewLine}\\item Item 2{System.Environment.NewLine}\\end{{enumEX}}";
+            string result = LatexTransformationService.FormatEnumEX(input, "3", "1.");
+
+            Assert.Equal(expected, result);
         }
 
         [Fact]

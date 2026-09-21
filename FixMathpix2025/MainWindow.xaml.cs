@@ -362,39 +362,10 @@ namespace FixMathpix2025
                 return;
             }
 
-            // Lấy số cột từ ComboBox
             string columnCount = (ListColumnCountComboBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "1";
+            string replacementText = LatexTransformationService.FormatListEX(selectedText, columnCount);
 
-            var lines = selectedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            var newContent = new StringBuilder();
-
-            newContent.AppendLine($"\\begin{{listEX}}[{columnCount}]");
-
-            // Regex để tìm các mục trong danh sách.
-            // Hỗ trợ các định dạng: "a.", "a)", "a/", "-", "•" theo sau là khoảng trắng.
-            var regex = new Regex(@"^\s*([a-z][\.\)\/]|[-•])\s*(.*)", RegexOptions.IgnoreCase);
-
-            foreach (var line in lines)
-            {
-                var match = regex.Match(line);
-                string itemContent;
-                if (match.Success)
-                {
-                    // Lấy nội dung sau dấu đầu dòng
-                    itemContent = match.Groups[2].Value.Trim();
-                }
-                else
-                {
-                    // Nếu không khớp, coi cả dòng là nội dung
-                    itemContent = line.Trim();
-                }
-                newContent.AppendLine($"\\item {itemContent}");
-            }
-
-            newContent.Append("\\end{listEX}");
-
-            // Thay thế văn bản đã chọn bằng nội dung mới
-            textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, newContent.ToString());
+            textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, replacementText);
         }
 
         private void EnumEXButton_Click(object sender, RoutedEventArgs e)
@@ -405,40 +376,11 @@ namespace FixMathpix2025
                 return;
             }
 
-            // Lấy số cột từ ComboBox
             string columnCount = (ListColumnCountComboBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "1";
-            // Lấy kiểu danh sách từ ComboBox
             string listStyle = (EnumStyleComboBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "a)";
+            string replacementText = LatexTransformationService.FormatEnumEX(selectedText, columnCount, listStyle);
 
-            var lines = selectedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            var newContent = new StringBuilder();
-
-            newContent.AppendLine($"\\begin{{enumEX}}[{listStyle}]{{{columnCount}}}");
-
-            // Regex để tìm các mục trong danh sách.
-            var regex = new Regex(@"^\s*([a-z0-9]+[\.\)\/]|[-•])\s*(.*)", RegexOptions.IgnoreCase);
-
-            foreach (var line in lines)
-            {
-                var match = regex.Match(line);
-                string itemContent;
-                if (match.Success)
-                {
-                    // Lấy nội dung sau dấu đầu dòng
-                    itemContent = match.Groups[2].Value.Trim();
-                }
-                else
-                {
-                    // Nếu không khớp, coi cả dòng là nội dung
-                    itemContent = line.Trim();
-                }
-                newContent.AppendLine($"\\item {itemContent}");
-            }
-
-            newContent.Append("\\end{enumEX}");
-
-            // Thay thế văn bản đã chọn bằng nội dung mới
-            textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, newContent.ToString());
+            textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, replacementText);
         }
 
         private void WrapSelectionWithCommand(string command)
