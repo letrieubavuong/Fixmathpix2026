@@ -109,7 +109,7 @@ namespace FixMathpix2025
             // No colorization, we rely on drawing for underlines
         }
 
-        public new void Transform(ITextRunConstructionContext context, IList<VisualLineElement> elements)
+        public void Transform(ITextRunConstructionContext context, IList<VisualLineElement> elements)
         {
             // No-op for now
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,7 @@ using System.Windows.Media;
 using ICSharpCode.AvalonEdit.CodeCompletion;
 using System.Windows.Threading;
 using ICSharpCode.AvalonEdit.Folding;
+using System.Windows.Input;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
 using System.Xml;
@@ -28,6 +29,7 @@ namespace FixMathpix2025
     public partial class MainWindow : Window
     {
         private FindAndReplace _findReplaceWindow;
+        private SettingsWindow _settingsWindow;
         private EditorSettings _editorSettings;
         private CompletionWindow _completionWindow;
         private string _currentFilePath;
@@ -75,10 +77,6 @@ namespace FixMathpix2025
 
             // Khởi tạo chức năng folding
             InitializeFolding();
-
-            // Đăng ký sự kiện cập nhật trạng thái con trỏ và tệp trên StatusBar
-            textEditor.TextArea.Caret.PositionChanged += Caret_PositionChanged;
-            UpdateStatusBarFile();
         }
 
         private void AutoCloseEnvironment()
@@ -816,18 +814,19 @@ namespace FixMathpix2025
                     currentContent = "\\begin{ex}\n" + currentContent;
                 }
 
-                currentContent = currentContent.Trim();
+                var sb = new StringBuilder(currentContent.Trim());
 
                 // Dọn dẹp khoảng trắng quanh dấu }
-                currentContent = currentContent.Replace(" }", "}")
-                                               .Replace("\t}", "}")
-                                               .Replace("{ ", "{")
-                                               .Replace(".}\n", "}\n");
-                currentContent = Regex.Replace(currentContent, @"\n{3,}", "\n\n");
+                sb.Replace(" }", "}");
+                sb.Replace("\t}", "}");
+                sb.Replace("{ ", "{");
+                sb.Replace(".}\n", "}\n");
+                currentContent = Regex.Replace(sb.ToString(), @"\n{3,}", "\n\n");
 
-                currentContent = FixMathtype(currentContent);
+                sb = new StringBuilder(currentContent);
+                FixMathtype(sb);
 
-                textEditor.Document.Text = currentContent;
+                textEditor.Document.Text = sb.ToString();
             }
             catch (Exception ex)
             {
@@ -838,21 +837,16 @@ namespace FixMathpix2025
         /// <summary>
         /// Thực hiện các thay thế và dọn dẹp cuối cùng cho văn bản LaTeX.
         /// </summary>
-        /// <param name="text">Văn bản cần xử lý.</param>
-        /// <returns>Văn bản đã được dọn dẹp.</returns>
-        private string FixMathtype(string text)
+        /// <param name="sb">StringBuilder chứa nội dung cần xử lý.</param>
+        private void FixMathtype(StringBuilder sb)
         {
-            if (string.IsNullOrEmpty(text)) return text;
-
-            text = text.Replace(@"\^{", @"^")
-                       .Replace(@"_{", @"_");
+            if (sb == null || sb.Length == 0) return;
+            sb.Replace(@"\^{", @"^").Replace(@"_{", @"_");
 
             // Dọn dẹp khoảng trắng
-            text = Regex.Replace(text, @"([{\[])\s+", "$1"); // Xóa khoảng trắng sau [ hoặc {
-            text = Regex.Replace(text, @"\s+([}\\.,\?;!])", "$1"); // Xóa khoảng trắng trước các dấu câu
-            text = Regex.Replace(text, @"^[ \t]+", "", RegexOptions.Multiline); // Xóa khoảng trắng/tab ở đầu mỗi dòng
-
-            return text;
+            sb = new StringBuilder(Regex.Replace(sb.ToString(), @"([{\[])\s+", "$1")); // Xóa khoảng trắng sau [ hoặc {
+            sb = new StringBuilder(Regex.Replace(sb.ToString(), @"\s+([}\\.,\?;!])", "$1")); // Xóa khoảng trắng trước các dấu câu
+            sb = new StringBuilder(Regex.Replace(sb.ToString(), @"^[ \t]+", "", RegexOptions.Multiline)); // Xóa khoảng trắng/tab ở đầu mỗi dòng
         }
 
         private void FindReplaceButton_Click(object sender, RoutedEventArgs e)
@@ -1040,7 +1034,6 @@ namespace FixMathpix2025
                     Directory.CreateDirectory(directory);
                 }
                 File.WriteAllText(_autoSaveFilePath, textEditor.Document.Text);
-                StatusMessageTextBlock.Text = "Đã tự động lưu nháp lúc " + DateTime.Now.ToString("HH:mm:ss");
             }
             catch (Exception)
             {
@@ -1220,21 +1213,20 @@ namespace FixMathpix2025
                 string currentText = textEditor.Text;
                 int replacementsCount = 0;
 
-                // Sắp xếp các khóa theo độ dài giảm dần để khớp các từ/cụm từ dài trước
-                var sortedKeys = corrections.Keys.OrderByDescending(k => k.Length).ToList();
-                string pattern = @"\b(" + string.Join("|", sortedKeys.Select(Regex.Escape)) + @")\b";
-
-                var lookup = new Dictionary<string, string>(corrections, StringComparer.OrdinalIgnoreCase);
-
-                currentText = Regex.Replace(currentText, pattern, m =>
+                foreach (var correction in corrections)
                 {
-                    if (lookup.TryGetValue(m.Value, out string replacement))
+                    // Tạo mẫu regex để chỉ khớp với từ hoàn chỉnh (whole word)
+                    // \b là một "word boundary" (ranh giới từ)
+                    string pattern = @"\b" + Regex.Escape(correction.Key) + @"\b";
+
+                    var matches = Regex.Matches(currentText, pattern, RegexOptions.IgnoreCase);
+                    if (matches.Count > 0)
                     {
-                        replacementsCount++;
-                        return replacement;
+                        // Thực hiện thay thế, không phân biệt hoa thường
+                        currentText = Regex.Replace(currentText, pattern, correction.Value, RegexOptions.IgnoreCase);
+                        replacementsCount += matches.Count;
                     }
-                    return m.Value;
-                }, RegexOptions.IgnoreCase);
+                }
 
                 if (replacementsCount > 0)
                 {
@@ -1636,8 +1628,6 @@ namespace FixMathpix2025
                     _currentFilePath = openFileDialog.FileName;
                     StartWatchingFile(_currentFilePath); // Bắt đầu theo dõi tệp mới
                     this.Title = $"FixMathpix 2025 - {_currentFilePath}";
-                    UpdateStatusBarFile();
-                    StatusMessageTextBlock.Text = "Đã mở tệp thành công";
                 }
                 catch (Exception ex)
                 {
@@ -1659,7 +1649,7 @@ namespace FixMathpix2025
                     _isSaving = true; // Đặt cờ trước khi lưu
                     File.WriteAllText(_currentFilePath, textEditor.Text);
                     _lastFileWriteTime = File.GetLastWriteTimeUtc(_currentFilePath); // Cập nhật thời gian sau khi lưu
-                    StatusMessageTextBlock.Text = "Đã lưu tệp thành công";
+                    MessageBox.Show("Đã lưu tệp thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
@@ -1691,8 +1681,7 @@ namespace FixMathpix2025
                     StartWatchingFile(_currentFilePath); // Bắt đầu theo dõi tệp mới
                     this.Title = $"FixMathpix 2025 - {_currentFilePath}";
                     _lastFileWriteTime = File.GetLastWriteTimeUtc(_currentFilePath); // Cập nhật thời gian
-                    UpdateStatusBarFile();
-                    StatusMessageTextBlock.Text = "Đã lưu tệp mới thành công";
+                    MessageBox.Show("Đã lưu tệp thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
@@ -1749,29 +1738,9 @@ namespace FixMathpix2025
 
             // Cập nhật tiêu đề cửa sổ
             this.Title = "FixMathpix 2025";
-            UpdateStatusBarFile();
-            StatusMessageTextBlock.Text = "Đã đóng tệp";
-        }
 
-        private void UpdateStatusBarFile()
-        {
-            if (FilePathTextBlock != null)
-            {
-                FilePathTextBlock.Text = string.IsNullOrEmpty(_currentFilePath) ? "Chưa mở tệp nào" : _currentFilePath;
-            }
-        }
-
-        private void Caret_PositionChanged(object sender, EventArgs e)
-        {
-            if (CaretPositionTextBlock != null && textEditor != null && textEditor.TextArea != null && textEditor.TextArea.Caret != null)
-            {
-                CaretPositionTextBlock.Text = $"Ln {textEditor.TextArea.Caret.Line}, Col {textEditor.TextArea.Caret.Column}";
-            }
-        }
-
-        private void Exit_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
+            // Có thể thêm thông báo cho người dùng nếu muốn
+            // MessageBox.Show("Đã đóng tệp.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void TitleCaseDang_Click(object sender, RoutedEventArgs e)
