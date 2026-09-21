@@ -126,6 +126,10 @@
     <Compile Include="TextMarkerService.cs" />
     <Compile Include="TexProcessingService.cs" />
     <Compile Include="SpellingService.cs" />
+    <Compile Include="QuestionKind.cs" />
+    <Compile Include="QuestionItem.cs" />
+    <Compile Include="QuestionClassifier.cs" />
+    <Compile Include="QuestionBlockParser.cs" />
     <Compile Include="QuestionSortingService.cs" />
     <Page Include="FindandReplace.xaml">
       <SubType>Designer</SubType>

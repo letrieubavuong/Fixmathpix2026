@@ -1792,20 +1792,7 @@ namespace FixMathpix2025
             }
         }
 
-        private int ClassifyQuestion(string content)
-        {
-            // 1: Trắc nghiệm (\choice)
-            // 2: Đúng sai (\choiceTF)
-            // 3: Trả lời ngắn (\shortans)
-            // 4: Tự luận (Còn lại)
 
-            // Kiểm tra \choiceTF trước vì nó chứa từ "choice"
-            if (content.IndexOf(@"\choiceTF", StringComparison.OrdinalIgnoreCase) >= 0) return 2;
-            if (content.IndexOf(@"\choiceTF[t]", StringComparison.OrdinalIgnoreCase) >= 0) return 2;
-            if (content.IndexOf(@"\choice", StringComparison.OrdinalIgnoreCase) >= 0) return 1;
-            if (content.IndexOf(@"\shortans", StringComparison.OrdinalIgnoreCase) >= 0) return 3;
-            return 4;
-        }
 
         private string TitleCaseMath(string input)
         {
