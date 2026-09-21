@@ -23,6 +23,57 @@ namespace FixMathpix2025.Tests
         }
 
         [Fact]
+        public void LegacySettings_NullShortcuts_ShouldFallbackToDefaults()
+        {
+            var json = @"{ ""FontFamily"": ""Consolas"", ""Shortcuts"": null }";
+            var settings = System.Text.Json.JsonSerializer.Deserialize<EditorSettings>(json);
+
+            // Normalize legacy
+            if (settings.Shortcuts == null || settings.Shortcuts.Count == 0)
+            {
+                settings.Shortcuts = DefaultEditorShortcuts.GetDefaultShortcuts();
+            }
+
+            Assert.NotNull(settings.Shortcuts);
+            Assert.NotEmpty(settings.Shortcuts);
+            Assert.Equal("Ctrl+/", settings.Shortcuts["local:CustomCommands.ToggleComment"]);
+        }
+
+        [Fact]
+        public void LegacySettings_EmptyShortcuts_ShouldFallbackToDefaults()
+        {
+            var json = @"{ ""FontFamily"": ""Consolas"", ""Shortcuts"": {} }";
+            var settings = System.Text.Json.JsonSerializer.Deserialize<EditorSettings>(json);
+
+            // Normalize legacy
+            if (settings.Shortcuts == null || settings.Shortcuts.Count == 0)
+            {
+                settings.Shortcuts = DefaultEditorShortcuts.GetDefaultShortcuts();
+            }
+
+            Assert.NotNull(settings.Shortcuts);
+            Assert.NotEmpty(settings.Shortcuts);
+            Assert.Equal("Ctrl+/", settings.Shortcuts["local:CustomCommands.ToggleComment"]);
+        }
+
+        [Fact]
+        public void CustomSettings_ValidCustomShortcut_ShouldNotBeResetToDefault()
+        {
+            var json = @"{ ""FontFamily"": ""Consolas"", ""Shortcuts"": { ""local:CustomCommands.ToggleComment"": ""Ctrl+Shift+T"" } }";
+            var settings = System.Text.Json.JsonSerializer.Deserialize<EditorSettings>(json);
+
+            // Normalize legacy
+            if (settings.Shortcuts == null || settings.Shortcuts.Count == 0)
+            {
+                settings.Shortcuts = DefaultEditorShortcuts.GetDefaultShortcuts();
+            }
+
+            Assert.NotNull(settings.Shortcuts);
+            Assert.Single(settings.Shortcuts);
+            Assert.Equal("Ctrl+Shift+T", settings.Shortcuts["local:CustomCommands.ToggleComment"]);
+        }
+
+        [Fact]
         public void ValidateShortcuts_WithDuplicateGestures_ShouldReject()
         {
             var shortcuts = new Dictionary<string, string>

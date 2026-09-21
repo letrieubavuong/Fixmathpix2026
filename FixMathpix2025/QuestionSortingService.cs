@@ -34,18 +34,45 @@ namespace FixMathpix2025
             return 4;
         }
 
+        public static bool IsKnownStandaloneWrapperLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return false;
+            string trimmed = line.Trim();
+            if (trimmed.StartsWith("%")) return false; // KHÔNG BAO GIỜ xóa comment!
+
+            if (string.Equals(trimmed, @"\BTVD", StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(trimmed, @"\PhanI", StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(trimmed, @"\PhanII", StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(trimmed, @"\PhanIII", StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(trimmed, @"\PhanIV", StringComparison.OrdinalIgnoreCase)) return true;
+
+            if (Regex.IsMatch(trimmed, @"^\\begin\{cauhoi(?:TN|DS|TLN|TL)\}\{[^}]*\}$", RegexOptions.IgnoreCase)) return true;
+            if (Regex.IsMatch(trimmed, @"^\\end\{cauhoi(?:TN|DS|TLN|TL)\}$", RegexOptions.IgnoreCase)) return true;
+
+            return false;
+        }
+
         /// <summary>
-        /// Loại bỏ các thẻ bao ngoài cũ (\BTVD, \PhanI..\PhanIV, \begin{cauhoi...}, \end{cauhoi...}) để chuẩn hóa văn bản trước khi sắp xếp lại.
+        /// Loại bỏ các thẻ bao ngoài cũ (\BTVD, \PhanI..\PhanIV, \begin{cauhoi...}, \end{cauhoi...}) một cách AN TOÀN THEO DÒNG.
+        /// CHỈ xóa khi cả dòng (sau khi Trim) là wrapper do hệ thống tạo. Giữ nguyên 100% comment và text.
         /// </summary>
         public static string NormalizeWrappers(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
-            string result = text;
-            result = Regex.Replace(result, @"\\BTVD\b[ \t]*(\r?\n)?", "", RegexOptions.IgnoreCase);
-            result = Regex.Replace(result, @"\\Phan(?:III|II|IV|I)\b[ \t]*(\r?\n)?", "", RegexOptions.IgnoreCase);
-            result = Regex.Replace(result, @"\\begin\{cauhoi(?:TN|DS|TLN|TL)\}\{[^}]*\}[ \t]*(\r?\n)?", "", RegexOptions.IgnoreCase);
-            result = Regex.Replace(result, @"\\end\{cauhoi(?:TN|DS|TLN|TL)\}[ \t]*(\r?\n)?", "", RegexOptions.IgnoreCase);
-            return result;
+
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var resultLines = new List<string>();
+
+            foreach (var line in lines)
+            {
+                if (IsKnownStandaloneWrapperLine(line))
+                {
+                    continue; // Bóc dòng wrapper độc lập
+                }
+                resultLines.Add(line);
+            }
+
+            return string.Join("\n", resultLines);
         }
 
         private class DocumentChunk

@@ -89,6 +89,42 @@ namespace FixMathpix2025.Tests
         }
 
         [Fact]
+        public void NormalizeWrappers_CommentWithPhanI_MustNotBeModified()
+        {
+            string input = @"% Tạm thời không dùng \PhanI ở đây
+\begin{ex} Q1 \choice{A}{B}{C}{D} \end{ex}";
+
+            string result = QuestionSortingService.ProcessSortQuestions(input, "01", out int sortedCount);
+
+            Assert.Equal(1, sortedCount);
+            Assert.Contains(@"% Tạm thời không dùng \PhanI ở đây", result);
+        }
+
+        [Fact]
+        public void NormalizeWrappers_CommentWithBeginCauhoi_MustNotBeModified()
+        {
+            string input = @"% \begin{cauhoiTN}{Bai01}
+\begin{ex} Q1 \choice{A}{B}{C}{D} \end{ex}";
+
+            string result = QuestionSortingService.ProcessSortQuestions(input, "01", out int sortedCount);
+
+            Assert.Equal(1, sortedCount);
+            Assert.Contains(@"% \begin{cauhoiTN}{Bai01}", result);
+        }
+
+        [Fact]
+        public void NormalizeWrappers_NormalTextWithBTVD_MustNotBeModified()
+        {
+            string input = @"Ghi chú: lệnh \BTVD được hệ thống sử dụng.
+\begin{ex} Q1 \choice{A}{B}{C}{D} \end{ex}";
+
+            string result = QuestionSortingService.ProcessSortQuestions(input, "01", out int sortedCount);
+
+            Assert.Equal(1, sortedCount);
+            Assert.Contains(@"Ghi chú: lệnh \BTVD được hệ thống sử dụng.", result);
+        }
+
+        [Fact]
         public void ProcessSortQuestions_StrongIdempotence_1x_2x_3x_ShouldBeIdentical()
         {
             string[] testCases = new string[]

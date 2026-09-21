@@ -37,13 +37,14 @@ namespace FixMathpix2025
 
         public static EditorSettings Load()
         {
+            EditorSettings settings = null;
             try
             {
                 string filePath = GetSettingsFilePath();
                 if (File.Exists(filePath))
                 {
                     string json = File.ReadAllText(filePath);
-                    return JsonSerializer.Deserialize<EditorSettings>(json) ?? new EditorSettings();
+                    settings = JsonSerializer.Deserialize<EditorSettings>(json);
                 }
             }
             catch (Exception)
@@ -51,7 +52,15 @@ namespace FixMathpix2025
                 // Lỗi khi đọc file, trả về cài đặt mặc định
             }
 
-            return new EditorSettings();
+            settings = settings ?? new EditorSettings();
+
+            // Legacy Migration / Fallback: Nếu Shortcuts bị null hoặc rỗng ({}) thì nạp lại phím tắt mặc định
+            if (settings.Shortcuts == null || settings.Shortcuts.Count == 0)
+            {
+                settings.Shortcuts = DefaultEditorShortcuts.GetDefaultShortcuts();
+            }
+
+            return settings;
         }
     }
 }

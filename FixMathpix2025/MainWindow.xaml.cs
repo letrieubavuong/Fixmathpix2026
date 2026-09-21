@@ -43,7 +43,7 @@ namespace FixMathpix2025
         private FileSystemWatcher _fileWatcher;
         private DateTime _lastFileWriteTime;
         private bool _isSaving = false; // Cờ để tránh tự kích hoạt sự kiện khi ứng dụng lưu tệp
-        private bool _autoSaveEventsRegistered = false;
+        private readonly AutoSaveRegistrationTracker _autoSaveTracker = new AutoSaveRegistrationTracker();
         private DispatcherTimer _fileWatcherDebounceTimer;
         private DateTime _expectedSaveWriteTimeUtc;
         private string _expectedContentHash;
@@ -978,7 +978,9 @@ namespace FixMathpix2025
             UpdateAutoSaveRegistration();
 
             // Apply dynamic shortcuts to InputBindings
-            var shortcutsToApply = settings.Shortcuts ?? DefaultEditorShortcuts.GetDefaultShortcuts();
+            var shortcutsToApply = (settings.Shortcuts == null || settings.Shortcuts.Count == 0)
+                ? DefaultEditorShortcuts.GetDefaultShortcuts()
+                : settings.Shortcuts;
             if (shortcutsToApply != null && shortcutsToApply.Count > 0)
             {
                 var converter = new KeyGestureConverter();
@@ -1121,11 +1123,9 @@ namespace FixMathpix2025
 
         private void EnableAutoSave()
         {
-            if (!_autoSaveEventsRegistered)
-            {
-                textEditor.TextChanged += TextEditor_TextChanged;
-                _autoSaveEventsRegistered = true;
-            }
+            _autoSaveTracker.Enable(
+                () => textEditor.TextChanged += TextEditor_TextChanged,
+                () => _autoSaveTimer?.Start());
         }
 
         private void TextEditor_TextChanged(object sender, EventArgs e)
@@ -1160,12 +1160,9 @@ namespace FixMathpix2025
 
         private void DisableAutoSave()
         {
-            if (_autoSaveEventsRegistered)
-            {
-                textEditor.TextChanged -= TextEditor_TextChanged;
-                _autoSaveEventsRegistered = false;
-            }
-            _autoSaveTimer?.Stop();
+            _autoSaveTracker.Disable(
+                () => textEditor.TextChanged -= TextEditor_TextChanged,
+                () => _autoSaveTimer?.Stop());
         }
 
         private void CheckForAutoSave()
