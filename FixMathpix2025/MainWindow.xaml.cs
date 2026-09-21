@@ -198,7 +198,7 @@ namespace FixMathpix2025
         {
             _fileMonitor.DispatcherInvoke = action => Dispatcher.Invoke(action);
             _fileMonitor.GetEditorTextCallback = () => textEditor.Text;
-            _fileMonitor.GetIsModifiedCallback = () => textEditor.IsModified;
+            _fileMonitor.GetIsModifiedCallback = () => _editorSession.IsDirty;
             _fileMonitor.ExternalFileChanged += FileMonitor_ExternalFileChanged;
         }
 
@@ -562,7 +562,7 @@ namespace FixMathpix2025
                     }
 
                     string combinedContent = string.Join(Environment.NewLine + Environment.NewLine,
-                        openFileDialog.FileNames.Select(File.ReadAllText));
+                        openFileDialog.FileNames.Select(_documentService.ReadText));
 
                     textEditor.Document.Insert(textEditor.Document.TextLength, contentToAppend.ToString() + combinedContent);
                     MessageBox.Show($"Đã ghép thành công {openFileDialog.FileNames.Length} tệp.", "Hoàn tất", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -891,6 +891,8 @@ namespace FixMathpix2025
                     if (snapshotContent != null)
                     {
                         SetEditorTextProgrammatically(snapshotContent);
+                        _editorSession.MarkRecovered();
+                        textEditor.IsModified = true;
                     }
                 }
             }
@@ -1405,7 +1407,7 @@ namespace FixMathpix2025
 
         private void OpenFile_Click(object sender, RoutedEventArgs e)
         {
-            if (_editorSession.IsDirty || textEditor.IsModified)
+            if (_editorSession.IsDirty)
             {
                 var result = MessageBox.Show(
                     "Tệp hiện tại có thay đổi chưa được lưu. Bạn có muốn lưu trước khi mở tệp khác không?",
@@ -1531,7 +1533,7 @@ namespace FixMathpix2025
         private void CloseFile_Click(object sender, RoutedEventArgs e)
         {
             // Kiểm tra xem có thay đổi chưa được lưu không
-            if (_editorSession.IsDirty || textEditor.IsModified)
+            if (_editorSession.IsDirty)
             {
                 var result = MessageBox.Show(
                     "Tệp hiện tại có thay đổi chưa được lưu. Bạn có muốn lưu lại không?",

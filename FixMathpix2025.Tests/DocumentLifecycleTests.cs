@@ -278,5 +278,154 @@ Một câu hỏi Vật lí chứa tiếng Việt: $E = mc^2$.
         }
 
         #endregion
+
+        #region Phase 3.1 Hardening & Failure Atomicity Tests
+
+        [Fact]
+        public void EditorSession_MarkRecovered_SetsDirtyTrueAndPathNull()
+        {
+            var session = new EditorSession();
+            session.MarkOpened(@"C:\test\sample.tex");
+
+            session.MarkRecovered();
+            Assert.Null(session.CurrentFilePath);
+            Assert.True(session.IsDirty);
+            Assert.False(session.HasFile);
+        }
+
+        [Fact]
+        public void AtomicFailure_OpenFailure_PreservesOriginalSessionState()
+        {
+            var session = new EditorSession();
+            session.MarkOpened(@"C:\test\existing.tex");
+            session.MarkModified();
+
+            var failingService = new FailingDocumentService { ThrowOnRead = true };
+
+            // Simulate Open flow when ReadText throws
+            Assert.Throws<IOException>(() => failingService.ReadText(@"C:\test\new.tex"));
+
+            // Session state must be unchanged
+            Assert.Equal(@"C:\test\existing.tex", session.CurrentFilePath);
+            Assert.True(session.IsDirty);
+            Assert.True(session.HasFile);
+        }
+
+        [Fact]
+        public void AtomicFailure_SaveFailure_PreservesDirtyState()
+        {
+            var session = new EditorSession();
+            session.MarkOpened(@"C:\test\existing.tex");
+            session.MarkModified();
+
+            var failingService = new FailingDocumentService { ThrowOnWrite = true };
+
+            // Simulate Save flow when WriteText throws
+            Assert.Throws<IOException>(() => failingService.WriteText(session.CurrentFilePath, "new content"));
+
+            // MarkSaved must NOT be called, session must remain dirty
+            Assert.Equal(@"C:\test\existing.tex", session.CurrentFilePath);
+            Assert.True(session.IsDirty);
+        }
+
+        [Fact]
+        public void AtomicFailure_SaveAsFailure_PreservesOriginalPathAndDirtyState()
+        {
+            var session = new EditorSession();
+            session.MarkOpened(@"C:\test\original.tex");
+            session.MarkModified();
+
+            var failingService = new FailingDocumentService { ThrowOnWrite = true };
+            string targetPath = @"C:\test\target.tex";
+
+            // Simulate SaveAs flow when WriteText throws
+            Assert.Throws<IOException>(() => failingService.WriteText(targetPath, "new content"));
+
+            // Session path must NOT change to targetPath, and must remain dirty
+            Assert.Equal(@"C:\test\original.tex", session.CurrentFilePath);
+            Assert.True(session.IsDirty);
+        }
+
+        [Fact]
+        public void ExternalFileChangeMonitor_ClearSaveFlags_DoesNotSuppressExternalWriteWithFailedSaveContent()
+        {
+            string tempFile = Path.Combine(Path.GetTempPath(), "monitor_fail_test_" + Guid.NewGuid() + ".tex");
+            File.WriteAllText(tempFile, "initial content");
+
+            try
+            {
+                using (var monitor = new ExternalFileChangeMonitor())
+                {
+                    monitor.StartWatching(tempFile);
+                    string failedSaveContent = "failed save content";
+                    monitor.NotifySaveStarting(failedSaveContent);
+
+                    // Write fails -> ClearSaveFlags is called
+                    monitor.ClearSaveFlags();
+
+                    // Later, an external program writes failedSaveContent to disk
+                    System.Threading.Thread.Sleep(50);
+                    File.WriteAllText(tempFile, failedSaveContent);
+
+                    // External change MUST be detected (hash must not suppress)
+                    bool changeDetected = monitor.EvaluateExternalChange("initial content", true, out string diskContent);
+                    Assert.True(changeDetected);
+                    Assert.Equal(failedSaveContent, diskContent);
+                }
+            }
+            finally
+            {
+                if (File.Exists(tempFile))
+                {
+                    File.Delete(tempFile);
+                }
+            }
+        }
+
+        [Fact]
+        public void AutoSaveService_RecoveryWorkflow_MarkRecoveredSessionState()
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), "autosave_rec_state_" + Guid.NewGuid() + ".tex");
+            var service = new AutoSaveService(tempPath);
+            var session = new EditorSession();
+
+            try
+            {
+                string snapshotContent = @"\begin{ex} Recovered content \end{ex}";
+                service.SaveSnapshot(snapshotContent);
+
+                string recoveredContent = service.ReadAutoSaveSnapshot();
+                Assert.Equal(snapshotContent, recoveredContent);
+
+                session.MarkRecovered();
+                Assert.Null(session.CurrentFilePath);
+                Assert.True(session.IsDirty);
+                Assert.False(session.HasFile);
+            }
+            finally
+            {
+                service.ClearAutoSaveSnapshot();
+            }
+        }
+
+        #endregion
+    }
+
+    public class FailingDocumentService : DocumentService
+    {
+        public bool ThrowOnRead { get; set; }
+        public bool ThrowOnWrite { get; set; }
+
+        public override string ReadText(string filePath)
+        {
+            if (ThrowOnRead) throw new IOException("Disk read failure simulation");
+            return base.ReadText(filePath);
+        }
+
+        public override void WriteText(string filePath, string content)
+        {
+            if (ThrowOnWrite) throw new IOException("Disk write failure simulation");
+            base.WriteText(filePath, content);
+        }
     }
 }

@@ -35,5 +35,11 @@ namespace FixMathpix2025
             CurrentFilePath = null;
             IsDirty = false;
         }
+
+        public void MarkRecovered()
+        {
+            CurrentFilePath = null;
+            IsDirty = true;
+        }
     }
 }

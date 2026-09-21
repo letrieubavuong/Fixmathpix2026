@@ -100,6 +100,7 @@ namespace FixMathpix2025
         public void ClearSaveFlags()
         {
             _isSaving = false;
+            _expectedContentHash = null;
         }
 
         private void OnFileChanged(object sender, FileSystemEventArgs e)
