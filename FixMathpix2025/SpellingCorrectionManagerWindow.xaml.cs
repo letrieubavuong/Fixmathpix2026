@@ -10,60 +10,18 @@ using System.Xml;
 
 namespace FixMathpix2025
 {
-    // Data model for a single correction rule
-    public class CorrectionRule : INotifyPropertyChanged
-    {
-        private string _findText;
-        public string FindText
-        {
-            get => _findText;
-            set
-            {
-                if (_findText != value)
-                {
-                    _findText = value;
-                    OnPropertyChanged(nameof(FindText));
-                }
-            }
-        }
-
-        private string _replaceText;
-        public string ReplaceText
-        {
-            get => _replaceText;
-            set
-            {
-                if (_replaceText != value)
-                {
-                    _replaceText = value;
-                    OnPropertyChanged(nameof(ReplaceText));
-                }
-            }
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-
     /// <summary>
     /// Interaction logic for SpellingCorrectionManagerWindow.xaml
     /// </summary>
     public partial class SpellingCorrectionManagerWindow : Window
     {
         private ObservableCollection<CorrectionRule> _corrections;
-        private readonly string _userSpellingCorrectionsFilePath;
+        private readonly SpellingRepository _spellingRepository;
 
-        public SpellingCorrectionManagerWindow()
+        public SpellingCorrectionManagerWindow(SpellingRepository spellingRepository = null)
         {
             InitializeComponent();
-            _userSpellingCorrectionsFilePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "FixMathpix2025",
-                "SpellingCorrections.xml"
-            );
+            _spellingRepository = spellingRepository ?? new SpellingRepository();
             _corrections = new ObservableCollection<CorrectionRule>();
             LoadCorrections();
 
@@ -75,39 +33,12 @@ namespace FixMathpix2025
         private void LoadCorrections()
         {
             _corrections.Clear();
-            XmlDocument doc = new XmlDocument();
-
             try
             {
-                // Try to load from user-specific file first
-                if (File.Exists(_userSpellingCorrectionsFilePath))
+                var rules = _spellingRepository.Load();
+                foreach (var rule in rules)
                 {
-                    doc.Load(_userSpellingCorrectionsFilePath);
-                }
-                else
-                {
-                    // Fallback to embedded resource if user file doesn't exist
-                    Assembly assembly = Assembly.GetExecutingAssembly();
-                    string resourceName = "FixMathpix2025.SpellingCorrections.xml";
-                    using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-                    {
-                        if (stream == null)
-                        {
-                            MessageBox.Show("Không tìm thấy tệp SpellingCorrections.xml nhúng.", "Lỗi tải", MessageBoxButton.OK, MessageBoxImage.Error);
-                            return;
-                        }
-                        doc.Load(stream);
-                    }
-                }
-
-                foreach (XmlNode node in doc.SelectNodes("//Correction"))
-                {
-                    string find = node.Attributes["find"]?.Value;
-                    string replace = node.Attributes["replace"]?.Value;
-                    if (!string.IsNullOrEmpty(find) && replace != null)
-                    {
-                        _corrections.Add(new CorrectionRule { FindText = find, ReplaceText = replace });
-                    }
+                    _corrections.Add(rule);
                 }
             }
             catch (Exception ex)
@@ -120,28 +51,7 @@ namespace FixMathpix2025
         {
             try
             {
-                string directory = Path.GetDirectoryName(_userSpellingCorrectionsFilePath);
-                if (!Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-
-                XmlDocument doc = new XmlDocument();
-                XmlDeclaration xmlDeclaration = doc.CreateXmlDeclaration("1.0", "utf-8", null);
-                doc.AppendChild(xmlDeclaration);
-
-                XmlElement root = doc.CreateElement("Corrections");
-                doc.AppendChild(root);
-
-                foreach (var rule in _corrections)
-                {
-                    XmlElement correctionNode = doc.CreateElement("Correction");
-                    correctionNode.SetAttribute("find", rule.FindText);
-                    correctionNode.SetAttribute("replace", rule.ReplaceText);
-                    root.AppendChild(correctionNode);
-                }
-
-                doc.Save(_userSpellingCorrectionsFilePath);
+                _spellingRepository.Save(_corrections);
                 MessageBox.Show("Đã lưu các quy tắc sửa lỗi thành công!", "Lưu thành công", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)

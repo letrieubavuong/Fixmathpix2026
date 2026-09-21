@@ -35,6 +35,8 @@ namespace FixMathpix2025
         private readonly DocumentService _documentService = new DocumentService();
         private readonly AutoSaveService _autoSaveService = new AutoSaveService();
         private readonly ExternalFileChangeMonitor _fileMonitor = new ExternalFileChangeMonitor();
+        private readonly SettingsRepository _settingsRepository = new SettingsRepository();
+        private readonly SpellingRepository _spellingRepository = new SpellingRepository();
         private DispatcherTimer _autoSaveTimer;
         private bool _isApplyingDocumentContent;
 
@@ -665,13 +667,13 @@ namespace FixMathpix2025
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            SettingsWindow settingsWindow = new SettingsWindow(this);
+            SettingsWindow settingsWindow = new SettingsWindow(this, _settingsRepository);
             settingsWindow.ShowDialog();
         }
 
         private void LoadAndApplySettings()
         {
-            _editorSettings = EditorSettings.Load();
+            _editorSettings = _settingsRepository.Load();
             ApplySettings(_editorSettings);
         }
 
@@ -1050,7 +1052,7 @@ namespace FixMathpix2025
         {
             try
             {
-                var corrections = LoadSpellingCorrections();
+                var corrections = _spellingRepository.LoadDictionary();
                 if (!corrections.Any())
                 {
                     MessageBox.Show("Không tìm thấy hoặc không có quy tắc sửa lỗi nào trong thư viện.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1079,59 +1081,9 @@ namespace FixMathpix2025
 
         private void ManageSpellingButton_Click(object sender, RoutedEventArgs e)
         {
-            SpellingCorrectionManagerWindow managerWindow = new SpellingCorrectionManagerWindow();
+            SpellingCorrectionManagerWindow managerWindow = new SpellingCorrectionManagerWindow(_spellingRepository);
             managerWindow.Owner = this; // Set owner to keep it on top of main window
             managerWindow.ShowDialog();
-        }
-
-        private Dictionary<string, string> LoadSpellingCorrections()
-        {
-            var corrections = new Dictionary<string, string>();
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            string resourceName = "FixMathpix2025.SpellingCorrections.xml";
-
-            // Define user-specific path for corrections
-            string userSpellingCorrectionsFilePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "FixMathpix2025",
-                "SpellingCorrections.xml"
-            );
-
-            XmlDocument doc = new XmlDocument();
-            bool loaded = false;
-
-            // Try to load from user-specific file first
-            if (File.Exists(userSpellingCorrectionsFilePath))
-            {
-                doc.Load(userSpellingCorrectionsFilePath);
-                loaded = true;
-            }
-            else
-            {
-                // Fallback to embedded resource if user file doesn't exist
-                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-                {
-                    if (stream != null)
-                    {
-                        doc.Load(stream);
-                        loaded = true;
-                    }
-                }
-            }
-
-            if (loaded)
-            {
-                foreach (XmlNode node in doc.SelectNodes("//Correction"))
-                {
-                    string find = node.Attributes["find"]?.Value;
-                    string replace = node.Attributes["replace"]?.Value;
-                    if (!string.IsNullOrEmpty(find) && replace != null && !corrections.ContainsKey(find))
-                    {
-                        corrections.Add(find, replace);
-                    }
-                }
-            }
-            return corrections;
         }
 
         private void HinhanhButton_Click(object sender, RoutedEventArgs e)

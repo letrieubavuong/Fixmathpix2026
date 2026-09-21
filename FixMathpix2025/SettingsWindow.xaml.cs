@@ -93,13 +93,15 @@ namespace FixMathpix2025
     {
         private EditorSettings _currentSettings;
         private readonly MainWindow _mainWindow;
+        private readonly SettingsRepository _settingsRepository;
         public ObservableCollection<HighlightingColorViewModel> HighlightingColors { get; set; }
         public ObservableCollection<ShortcutSetting> Shortcuts { get; set; }
 
-        public SettingsWindow(MainWindow mainWindow)
+        public SettingsWindow(MainWindow mainWindow, SettingsRepository settingsRepository = null)
         {
             InitializeComponent();
             _mainWindow = mainWindow;
+            _settingsRepository = settingsRepository ?? new SettingsRepository();
             this.Owner = mainWindow;
             LoadSettings();
             PopulateControls();
@@ -107,7 +109,7 @@ namespace FixMathpix2025
 
         private void LoadSettings()
         {
-            _currentSettings = EditorSettings.Load();
+            _currentSettings = _settingsRepository.Load();
 
             // Lấy danh sách màu từ định nghĩa tô sáng hiện tại
             var currentHighlighting = _mainWindow.textEditor.SyntaxHighlighting;
@@ -261,7 +263,7 @@ namespace FixMathpix2025
         private bool SaveSettings()
         {
             if (!TryApplySettings()) return false;
-            _currentSettings.Save();
+            _settingsRepository.Save(_currentSettings);
             return true;
         }
 

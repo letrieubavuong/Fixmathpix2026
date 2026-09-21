@@ -1,4 +1,4 @@
-﻿using ICSharpCode.AvalonEdit;
+using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Search;
 using System;
 using System.Collections.Generic;
@@ -17,17 +17,14 @@ namespace FixMathpix2025
     {
         private readonly TextEditor _textEditor;
         private readonly ObservableCollection<SearchReplaceItem> _searchHistory;
-        private readonly string _historyFilePath;
+        private readonly SearchHistoryRepository _searchHistoryRepository;
 
-        public FindAndReplace(TextEditor textEditor)
+        public FindAndReplace(TextEditor textEditor, SearchHistoryRepository searchHistoryRepository = null)
         {
             InitializeComponent();
             _textEditor = textEditor;
+            _searchHistoryRepository = searchHistoryRepository ?? new SearchHistoryRepository();
             this.Owner = Application.Current.MainWindow;
-
-            // Define path for the history file in AppData
-            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            _historyFilePath = Path.Combine(appDataPath, "FixMathpix2025", "search_history.json");
 
             _searchHistory = LoadHistory();
             SearchHistoryGrid.ItemsSource = _searchHistory;
@@ -186,15 +183,9 @@ namespace FixMathpix2025
 
         private ObservableCollection<SearchReplaceItem> LoadHistory()
         {
-            if (!File.Exists(_historyFilePath))
-            {
-                return new ObservableCollection<SearchReplaceItem>();
-            }
-
             try
             {
-                string json = File.ReadAllText(_historyFilePath);
-                var items = JsonSerializer.Deserialize<List<SearchReplaceItem>>(json);
+                var items = _searchHistoryRepository.Load();
                 return new ObservableCollection<SearchReplaceItem>(items);
             }
             catch (Exception ex)
@@ -208,14 +199,7 @@ namespace FixMathpix2025
         {
             try
             {
-                string directory = Path.GetDirectoryName(_historyFilePath);
-                if (!Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-
-                string json = JsonSerializer.Serialize(_searchHistory, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_historyFilePath, json);
+                _searchHistoryRepository.Save(_searchHistory);
             }
             catch (Exception ex)
             {
