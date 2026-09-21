@@ -111,6 +111,7 @@
     <Compile Include="EditorSettings.cs" />
     <Compile Include="ExternalFileChangeMonitor.cs" />
     <Compile Include="SearchHistoryRepository.cs" />
+    <Compile Include="SettingsCommitService.cs" />
     <Compile Include="SettingsRepository.cs" />
     <Compile Include="SpellingRepository.cs" />
     <Compile Include="GoToLineDialog.xaml.cs">

@@ -210,9 +210,9 @@ namespace FixMathpix2025
             return list;
         }
 
-        private bool TryApplySettings()
+        private bool TryBuildValidatedSettings(out EditorSettings candidate)
         {
-            var candidate = new EditorSettings
+            candidate = new EditorSettings
             {
                 FontFamily = (FontFamilyComboBox.SelectedItem is FontFamily selectedFont) ? selectedFont.Source : _currentSettings.FontFamily,
                 FontSize = double.TryParse(FontSizeComboBox.Text, out double newSize) ? newSize : _currentSettings.FontSize,
@@ -226,6 +226,7 @@ namespace FixMathpix2025
             if (!SettingsValidator.ValidateHighlightingColors(candidate.HighlightingColors, out string colorError))
             {
                 MessageBox.Show(this, colorError, "Lỗi màu sắc", MessageBoxButton.OK, MessageBoxImage.Error);
+                candidate = null;
                 return false;
             }
 
@@ -233,6 +234,7 @@ namespace FixMathpix2025
             if (!SettingsValidator.ValidateShortcuts(candidate.Shortcuts, out string shortcutError))
             {
                 MessageBox.Show(this, shortcutError, "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
+                candidate = null;
                 return false;
             }
 
@@ -240,8 +242,8 @@ namespace FixMathpix2025
             if (Shortcuts != null && Shortcuts.Any(s => s.IsDuplicate))
             {
                 var duplicates = Shortcuts.Where(s => s.IsDuplicate)
-                                          .GroupBy(s => s.KeyGesture)
-                                          .Where(g => g.Count() > 1);
+                                           .GroupBy(s => s.KeyGesture)
+                                           .Where(g => g.Count() > 1);
 
                 var errorBuilder = new System.Text.StringBuilder();
                 errorBuilder.AppendLine("Không thể lưu cài đặt do có phím tắt bị trùng lặp:");
@@ -251,20 +253,23 @@ namespace FixMathpix2025
                     errorBuilder.AppendLine($"  - Phím tắt '{group.Key}' được gán cho các chức năng: {string.Join(", ", functionNames)}");
                 }
                 MessageBox.Show(this, errorBuilder.ToString(), "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
+                candidate = null;
                 return false;
             }
 
-            // Validated! Commit candidate to current settings
-            _currentSettings = candidate;
-            _mainWindow.ApplySettings(_currentSettings);
             return true;
+        }
+
+        private bool ApplySettingsFromControls()
+        {
+            if (!TryBuildValidatedSettings(out var candidate)) return false;
+            return SettingsCommitService.CommitApply(candidate, _mainWindow.ApplySettings, ref _currentSettings);
         }
 
         private bool SaveSettings()
         {
-            if (!TryApplySettings()) return false;
-            _settingsRepository.Save(_currentSettings);
-            return true;
+            if (!TryBuildValidatedSettings(out var candidate)) return false;
+            return SettingsCommitService.CommitSave(candidate, _settingsRepository, _mainWindow.ApplySettings, ref _currentSettings);
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -287,7 +292,7 @@ namespace FixMathpix2025
         {
             try
             {
-                TryApplySettings();
+                ApplySettingsFromControls();
             }
             catch (Exception ex)
             {

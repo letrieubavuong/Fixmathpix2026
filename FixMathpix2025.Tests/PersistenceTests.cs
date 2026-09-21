@@ -294,5 +294,112 @@ namespace FixMathpix2025.Tests
         }
 
         #endregion
+
+        #region SettingsCommitService Tests
+
+        private class ThrowingSettingsRepository : SettingsRepository
+        {
+            public override void Save(EditorSettings settings)
+            {
+                throw new IOException("Simulated disk save failure");
+            }
+        }
+
+        private class TrackingSettingsRepository : SettingsRepository
+        {
+            public bool SaveCalled { get; private set; }
+
+            public override void Save(EditorSettings settings)
+            {
+                SaveCalled = true;
+                base.Save(settings);
+            }
+        }
+
+        private class CustomOrderTrackingRepository : SettingsRepository
+        {
+            private readonly List<string> _log;
+
+            public CustomOrderTrackingRepository(List<string> log, string file) : base(file)
+            {
+                _log = log;
+            }
+
+            public override void Save(EditorSettings settings)
+            {
+                _log.Add("RepositorySave");
+                base.Save(settings);
+            }
+        }
+
+        [Fact]
+        public void SettingsCommitService_SaveFailure_AtomicityPreserved_NoRuntimeStateMutation()
+        {
+            var initialSettings = new EditorSettings { FontFamily = "Consolas", FontSize = 14 };
+            var currentSettings = initialSettings;
+
+            var candidate = new EditorSettings { FontFamily = "Arial", FontSize = 20 };
+            var repo = new ThrowingSettingsRepository();
+
+            bool runtimeApplied = false;
+
+            // Attempt commit save with throwing repository
+            var ex = Assert.Throws<IOException>(() =>
+                SettingsCommitService.CommitSave(candidate, repo, s => runtimeApplied = true, ref currentSettings)
+            );
+
+            // Assert atomicity
+            Assert.Equal("Simulated disk save failure", ex.Message);
+            Assert.Same(initialSettings, currentSettings);
+            Assert.Equal("Consolas", currentSettings.FontFamily);
+            Assert.Equal(14, currentSettings.FontSize);
+            Assert.False(runtimeApplied);
+        }
+
+        [Fact]
+        public void SettingsCommitService_SaveSuccess_OrderIsPersistFirstThenApply()
+        {
+            string file = Path.Combine(_tempDir, "commit_order_settings.json");
+            var currentSettings = new EditorSettings { FontFamily = "Consolas", FontSize = 14 };
+            var candidate = new EditorSettings { FontFamily = "Verdana", FontSize = 16 };
+
+            var executionLog = new List<string>();
+
+            Action<EditorSettings> applyAction = s =>
+            {
+                executionLog.Add("ApplyRuntime");
+            };
+
+            var testRepo = new CustomOrderTrackingRepository(executionLog, file);
+
+            SettingsCommitService.CommitSave(candidate, testRepo, applyAction, ref currentSettings);
+
+            Assert.Equal(2, executionLog.Count);
+            Assert.Equal("RepositorySave", executionLog[0]);
+            Assert.Equal("ApplyRuntime", executionLog[1]);
+            Assert.Same(candidate, currentSettings);
+            Assert.Equal("Verdana", currentSettings.FontFamily);
+        }
+
+        [Fact]
+        public void SettingsCommitService_ApplyButton_DoesNotPersistToRepository()
+        {
+            string file = Path.Combine(_tempDir, "apply_only_settings.json");
+            var repo = new TrackingSettingsRepository();
+            var currentSettings = new EditorSettings { FontFamily = "Consolas", FontSize = 14 };
+            var candidate = new EditorSettings { FontFamily = "Courier New", FontSize = 18 };
+
+            bool runtimeApplied = false;
+
+            SettingsCommitService.CommitApply(candidate, s => runtimeApplied = true, ref currentSettings);
+
+            Assert.True(runtimeApplied);
+            Assert.Same(candidate, currentSettings);
+            Assert.Equal("Courier New", currentSettings.FontFamily);
+            Assert.False(repo.SaveCalled);
+            Assert.False(File.Exists(file));
+        }
+
+        #endregion
     }
 }
