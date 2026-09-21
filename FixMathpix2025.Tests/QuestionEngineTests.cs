@@ -41,7 +41,6 @@ namespace FixMathpix2025.Tests
         [Fact]
         public void Classify_PrefixSafety_CommandTokensMustNotMatchSubstrings()
         {
-            // \choicew or \choiceSomething should NOT be classified as MultipleChoice
             Assert.Equal(QuestionKind.Essay, QuestionClassifier.Classify(@"\begin{ex} \choicew{5cm} \end{ex}"));
             Assert.Equal(QuestionKind.Essay, QuestionClassifier.Classify(@"\begin{ex} \choiceSomething \end{ex}"));
             Assert.Equal(QuestionKind.Essay, QuestionClassifier.Classify(@"\begin{ex} \SAmething \end{ex}"));
@@ -59,6 +58,101 @@ namespace FixMathpix2025.Tests
         public void Classify_EscapedPercent_ShouldNotBeTreatedAsComment()
         {
             Assert.Equal(QuestionKind.MultipleChoice, QuestionClassifier.Classify(@"\begin{ex} Tỉ lệ 50\% \choice{A}{B}{C}{D} \end{ex}"));
+        }
+
+        [Fact]
+        public void Classify_Precedence_TrueFalseOverMultipleChoice()
+        {
+            string input = @"\begin{ex} \choice{A}{B}{C}{D} \choiceTF{a}{b}{c}{d} \end{ex}";
+            Assert.Equal(QuestionKind.TrueFalse, QuestionClassifier.Classify(input));
+        }
+
+        [Fact]
+        public void Classify_Precedence_MultipleChoiceOverShortAnswer()
+        {
+            string input = @"\begin{ex} \shortans{2} \choice{A}{B}{C}{D} \end{ex}";
+            Assert.Equal(QuestionKind.MultipleChoice, QuestionClassifier.Classify(input));
+        }
+
+        [Fact]
+        public void Classify_Precedence_TrueFalseOverShortAnswer()
+        {
+            string input = @"\begin{ex} \shortans{2} \choiceTF{a}{b}{c}{d} \end{ex}";
+            Assert.Equal(QuestionKind.TrueFalse, QuestionClassifier.Classify(input));
+        }
+
+        [Fact]
+        public void Classify_Precedence_EssayFallback()
+        {
+            string input = @"\begin{ex} Trình bày lời giải chi tiết. \loigiai{...} \end{ex}";
+            Assert.Equal(QuestionKind.Essay, QuestionClassifier.Classify(input));
+        }
+
+        [Fact]
+        public void BlockParser_MatchedEx_ShouldEmitValidBlock()
+        {
+            string input = @"\begin{ex} Q1 \choice{A}{B}{C}{D} \end{ex}";
+            var blocks = QuestionBlockParser.ParseBlocks(input);
+
+            Assert.Single(blocks);
+            Assert.Equal(QuestionKind.MultipleChoice, blocks[0].Kind);
+        }
+
+        [Fact]
+        public void BlockParser_MatchedBt_ShouldEmitValidBlock()
+        {
+            string input = @"\begin{bt} Q1 \end{bt}";
+            var blocks = QuestionBlockParser.ParseBlocks(input);
+
+            Assert.Single(blocks);
+            Assert.Equal(QuestionKind.Essay, blocks[0].Kind);
+        }
+
+        [Fact]
+        public void BlockParser_MismatchedExToBt_ShouldEmitZeroBlocks()
+        {
+            string input = @"\begin{ex} Broken \end{bt}";
+            var blocks = QuestionBlockParser.ParseBlocks(input);
+
+            Assert.Empty(blocks);
+        }
+
+        [Fact]
+        public void BlockParser_MismatchedBtToEx_ShouldEmitZeroBlocks()
+        {
+            string input = @"\begin{bt} Broken \end{ex}";
+            var blocks = QuestionBlockParser.ParseBlocks(input);
+
+            Assert.Empty(blocks);
+        }
+
+        [Fact]
+        public void BlockParser_UnmatchedBegin_ShouldEmitZeroBlocks()
+        {
+            string input = @"\begin{ex} Broken";
+            var blocks = QuestionBlockParser.ParseBlocks(input);
+
+            Assert.Empty(blocks);
+        }
+
+        [Fact]
+        public void BlockParser_UnmatchedEnd_ShouldEmitZeroBlocks()
+        {
+            string input = @"Text \end{ex}";
+            var blocks = QuestionBlockParser.ParseBlocks(input);
+
+            Assert.Empty(blocks);
+        }
+
+        [Fact]
+        public void BlockParser_RecoveryAfterInvalidBlock_ShouldParseValidBlockFollowingBrokenBlock()
+        {
+            string input = @"\begin{ex} Broken \end{bt} \begin{ex} Valid \choice{A}{B}{C}{D} \end{ex}";
+            var blocks = QuestionBlockParser.ParseBlocks(input);
+
+            Assert.Single(blocks);
+            Assert.Contains("Valid", blocks[0].Content);
+            Assert.DoesNotContain("Broken", blocks[0].Content);
         }
 
         [Fact]
@@ -127,7 +221,6 @@ namespace FixMathpix2025.Tests
             Assert.Contains(@"\PhanIV", result);
             Assert.Contains(@"\begin{cauhoiTL}{Bai01}", result);
 
-            // Idempotent test
             string resultTwice = QuestionSortingService.ProcessSortQuestions(result, "01", out _);
             Assert.Equal(result, resultTwice);
         }
