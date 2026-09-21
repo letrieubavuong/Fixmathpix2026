@@ -30,23 +30,17 @@ namespace FixMathpix2025
         private FindAndReplace _findReplaceWindow;
         private EditorSettings _editorSettings;
         private CompletionWindow _completionWindow;
-        private string _currentFilePath;
 
+        private readonly EditorSession _editorSession = new EditorSession();
+        private readonly DocumentService _documentService = new DocumentService();
+        private readonly AutoSaveService _autoSaveService = new AutoSaveService();
+        private readonly ExternalFileChangeMonitor _fileMonitor = new ExternalFileChangeMonitor();
         private DispatcherTimer _autoSaveTimer;
-        private readonly string _autoSaveFilePath;
+        private bool _isApplyingDocumentContent;
 
         private DispatcherTimer _bracketCheckTimer;
         private ITextMarkerService _textMarkerService;
         private readonly List<ITextMarker> _bracketErrorMarkers = new List<ITextMarker>();
-
-        // Thêm các biến để theo dõi tệp
-        private FileSystemWatcher _fileWatcher;
-        private DateTime _lastFileWriteTime;
-        private bool _isSaving = false; // Cờ để tránh tự kích hoạt sự kiện khi ứng dụng lưu tệp
-        private readonly AutoSaveRegistrationTracker _autoSaveTracker = new AutoSaveRegistrationTracker();
-        private DispatcherTimer _fileWatcherDebounceTimer;
-        private DateTime _expectedSaveWriteTimeUtc;
-        private string _expectedContentHash;
 
         // Định nghĩa lệnh tùy chỉnh để đóng tệp
         public static readonly RoutedCommand CloseTexCommand = new RoutedCommand("CloseTex", typeof(MainWindow));
@@ -61,7 +55,6 @@ namespace FixMathpix2025
             InitializeComponent();
             LoadLaTeXHighlighting();
 
-            _autoSaveFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FixMathpix2025", "autosave.tex");
             SetupAutoSaveTimer();
             LoadAndApplySettings();
             CheckForAutoSave();
@@ -69,6 +62,14 @@ namespace FixMathpix2025
             // Đăng ký sự kiện để xử lý tự động hoàn thành
             textEditor.TextArea.TextEntering += TextArea_TextEntering;
             textEditor.TextArea.TextEntered += TextArea_TextEntered;
+
+            textEditor.TextChanged += (sender, e) =>
+            {
+                if (!_isApplyingDocumentContent)
+                {
+                    _editorSession.MarkModified();
+                }
+            };
 
             // Khởi tạo các thành phần cho việc kiểm tra ngoặc
             SetupBracketChecking();
@@ -195,108 +196,28 @@ namespace FixMathpix2025
 
         private void InitializeFileWatcher()
         {
-            _fileWatcher = new FileSystemWatcher();
-            _fileWatcher.Changed += OnFileChanged;
-            _fileWatcher.NotifyFilter = NotifyFilters.LastWrite;
-
-            _fileWatcherDebounceTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(300)
-            };
-            _fileWatcherDebounceTimer.Tick += (sender, e) =>
-            {
-                _fileWatcherDebounceTimer.Stop();
-                ProcessFileChangeNotification();
-            };
+            _fileMonitor.DispatcherInvoke = action => Dispatcher.Invoke(action);
+            _fileMonitor.GetEditorTextCallback = () => textEditor.Text;
+            _fileMonitor.GetIsModifiedCallback = () => textEditor.IsModified;
+            _fileMonitor.ExternalFileChanged += FileMonitor_ExternalFileChanged;
         }
 
-        private void StartWatchingFile(string filePath)
+        private void FileMonitor_ExternalFileChanged(object sender, ExternalFileChangedEventArgs e)
         {
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            var result = MessageBox.Show(this, "Tệp đã bị thay đổi bởi một chương trình khác. Bạn có muốn tải lại nội dung mới không?", "Cảnh báo", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result == MessageBoxResult.Yes)
             {
-                _fileWatcher.EnableRaisingEvents = false;
-                return;
-            }
-
-            try
-            {
-                _fileWatcher.Path = Path.GetDirectoryName(filePath);
-                _fileWatcher.Filter = Path.GetFileName(filePath);
-                _lastFileWriteTime = File.GetLastWriteTimeUtc(filePath);
-                _fileWatcher.EnableRaisingEvents = true;
-            }
-            catch (Exception ex)
-            {
-                _fileWatcher.EnableRaisingEvents = false;
-                Console.WriteLine("Không thể bắt đầu theo dõi tệp: " + ex.Message);
-            }
-        }
-
-        private void OnFileChanged(object sender, FileSystemEventArgs e)
-        {
-            if (string.IsNullOrEmpty(_currentFilePath) || !e.FullPath.Equals(_currentFilePath, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            Dispatcher.Invoke(() =>
-            {
-                _fileWatcherDebounceTimer.Stop();
-                _fileWatcherDebounceTimer.Start();
-            });
-        }
-
-        private void ProcessFileChangeNotification()
-        {
-            if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
-                return;
-
-            try
-            {
-                DateTime currentWriteTime = File.GetLastWriteTimeUtc(_currentFilePath);
-
-                if (_isSaving || currentWriteTime == _expectedSaveWriteTimeUtc)
+                try
                 {
-                    return;
-                }
-
-                string diskContent = File.ReadAllText(_currentFilePath);
-                string diskHash = ComputeHash(diskContent);
-
-                if (_expectedContentHash != null && diskHash == _expectedContentHash)
-                {
-                    return;
-                }
-
-                string editorHash = ComputeHash(textEditor.Text);
-                if (!textEditor.IsModified && diskHash == editorHash)
-                {
-                    return;
-                }
-
-                _lastFileWriteTime = currentWriteTime;
-                _expectedSaveWriteTimeUtc = currentWriteTime;
-
-                var result = MessageBox.Show(this, "Tệp đã bị thay đổi bởi một chương trình khác. Bạn có muốn tải lại nội dung mới không?", "Cảnh báo", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                if (result == MessageBoxResult.Yes)
-                {
-                    textEditor.Text = diskContent;
-                    textEditor.IsModified = false;
+                    string diskContent = _documentService.ReadText(e.FilePath);
+                    SetEditorTextProgrammatically(diskContent);
+                    _editorSession.MarkOpened(e.FilePath);
                     StatusMessageTextBlock.Text = "Đã tải lại tệp thành công";
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Lỗi khi kiểm tra thay đổi tệp: " + ex.Message);
-            }
-        }
-
-        private string ComputeHash(string text)
-        {
-            if (text == null) return string.Empty;
-            using (var md5 = System.Security.Cryptography.MD5.Create())
-            {
-                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text);
-                byte[] hash = md5.ComputeHash(bytes);
-                return BitConverter.ToString(hash).Replace("-", "");
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Không thể tải lại tệp: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
@@ -927,12 +848,12 @@ namespace FixMathpix2025
 
         private void EnableAutoSave()
         {
-            _autoSaveTracker.Enable(
-                () => textEditor.TextChanged += TextEditor_TextChanged,
+            _autoSaveService.Enable(
+                () => textEditor.TextChanged += AutoSave_TextChanged,
                 () => _autoSaveTimer?.Start());
         }
 
-        private void TextEditor_TextChanged(object sender, EventArgs e)
+        private void AutoSave_TextChanged(object sender, EventArgs e)
         {
             _autoSaveTimer?.Stop();
             _autoSaveTimer?.Start();
@@ -946,51 +867,38 @@ namespace FixMathpix2025
                 return;
             }
             _autoSaveTimer?.Stop();
-            try
+            if (_autoSaveService.SaveSnapshot(textEditor.Document.Text))
             {
-                string directory = Path.GetDirectoryName(_autoSaveFilePath);
-                if (!Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-                File.WriteAllText(_autoSaveFilePath, textEditor.Document.Text);
                 StatusMessageTextBlock.Text = "Đã tự động lưu nháp lúc " + DateTime.Now.ToString("HH:mm:ss");
-            }
-            catch (Exception)
-            {
-                // Âm thầm xử lý ngoại lệ tự động lưu
             }
         }
 
         private void DisableAutoSave()
         {
-            _autoSaveTracker.Disable(
-                () => textEditor.TextChanged -= TextEditor_TextChanged,
+            _autoSaveService.Disable(
+                () => textEditor.TextChanged -= AutoSave_TextChanged,
                 () => _autoSaveTimer?.Stop());
         }
 
         private void CheckForAutoSave()
         {
-            if (File.Exists(_autoSaveFilePath))
+            if (_autoSaveService.HasAutoSaveSnapshot())
             {
                 var result = MessageBox.Show("Phát hiện có một phiên làm việc chưa được lưu. Bạn có muốn khôi phục lại không?", "Khôi phục phiên làm việc", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result == MessageBoxResult.Yes)
                 {
-                    textEditor.Document.Text = File.ReadAllText(_autoSaveFilePath);
+                    string snapshotContent = _autoSaveService.ReadAutoSaveSnapshot();
+                    if (snapshotContent != null)
+                    {
+                        SetEditorTextProgrammatically(snapshotContent);
+                    }
                 }
             }
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // Chỉ xóa tệp sao lưu nếu chức năng được bật
-            if (_editorSettings.IsAutoSaveEnabled)
-            {
-                if (File.Exists(_autoSaveFilePath))
-                {
-                    File.Delete(_autoSaveFilePath);
-                }
-            }
+            _autoSaveService.OnApplicationClosing(_editorSettings?.IsAutoSaveEnabled ?? false);
         }
 
 
@@ -1481,9 +1389,23 @@ namespace FixMathpix2025
             }
         }
 
+        private void SetEditorTextProgrammatically(string text)
+        {
+            _isApplyingDocumentContent = true;
+            try
+            {
+                textEditor.Text = text ?? string.Empty;
+                textEditor.IsModified = false;
+            }
+            finally
+            {
+                _isApplyingDocumentContent = false;
+            }
+        }
+
         private void OpenFile_Click(object sender, RoutedEventArgs e)
         {
-            if (textEditor.IsModified)
+            if (_editorSession.IsDirty || textEditor.IsModified)
             {
                 var result = MessageBox.Show(
                     "Tệp hiện tại có thay đổi chưa được lưu. Bạn có muốn lưu trước khi mở tệp khác không?",
@@ -1512,11 +1434,11 @@ namespace FixMathpix2025
             {
                 try
                 {
-                    textEditor.Text = File.ReadAllText(openFileDialog.FileName);
-                    _currentFilePath = openFileDialog.FileName;
-                    textEditor.IsModified = false;
-                    StartWatchingFile(_currentFilePath);
-                    this.Title = $"FixMathpix 2025 - {_currentFilePath}";
+                    string content = _documentService.ReadText(openFileDialog.FileName);
+                    SetEditorTextProgrammatically(content);
+                    _editorSession.MarkOpened(openFileDialog.FileName);
+                    _fileMonitor.StartWatching(_editorSession.CurrentFilePath);
+                    this.Title = $"FixMathpix 2025 - {_editorSession.CurrentFilePath}";
                     UpdateStatusBarFile();
                     StatusMessageTextBlock.Text = "Đã mở tệp thành công";
                 }
@@ -1534,7 +1456,7 @@ namespace FixMathpix2025
 
         private bool SaveFileInternal()
         {
-            if (string.IsNullOrEmpty(_currentFilePath))
+            if (!_editorSession.HasFile)
             {
                 return SaveFileAsInternal();
             }
@@ -1542,12 +1464,13 @@ namespace FixMathpix2025
             {
                 try
                 {
-                    _isSaving = true;
                     string content = textEditor.Text;
-                    _expectedContentHash = ComputeHash(content);
-                    File.WriteAllText(_currentFilePath, content);
-                    _lastFileWriteTime = File.GetLastWriteTimeUtc(_currentFilePath);
-                    _expectedSaveWriteTimeUtc = _lastFileWriteTime;
+                    _fileMonitor.NotifySaveStarting(content);
+                    _documentService.WriteText(_editorSession.CurrentFilePath, content);
+                    DateTime writeTimeUtc = File.GetLastWriteTimeUtc(_editorSession.CurrentFilePath);
+                    _fileMonitor.NotifySaveCompleted(_editorSession.CurrentFilePath, writeTimeUtc);
+
+                    _editorSession.MarkSaved(_editorSession.CurrentFilePath);
                     textEditor.IsModified = false;
                     StatusMessageTextBlock.Text = "Đã lưu tệp thành công";
                     MessageBox.Show("Đã lưu tệp thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1555,12 +1478,9 @@ namespace FixMathpix2025
                 }
                 catch (Exception ex)
                 {
+                    _fileMonitor.ClearSaveFlags();
                     MessageBox.Show("Không thể lưu tệp: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                     return false;
-                }
-                finally
-                {
-                    _isSaving = false;
                 }
             }
         }
@@ -1583,16 +1503,16 @@ namespace FixMathpix2025
             {
                 try
                 {
-                    _isSaving = true;
                     string content = textEditor.Text;
-                    _expectedContentHash = ComputeHash(content);
-                    File.WriteAllText(saveFileDialog.FileName, content);
-                    _currentFilePath = saveFileDialog.FileName;
+                    _fileMonitor.NotifySaveStarting(content);
+                    _documentService.WriteText(saveFileDialog.FileName, content);
+                    DateTime writeTimeUtc = File.GetLastWriteTimeUtc(saveFileDialog.FileName);
+                    _fileMonitor.NotifySaveCompleted(saveFileDialog.FileName, writeTimeUtc);
+
+                    _editorSession.MarkSaved(saveFileDialog.FileName);
                     textEditor.IsModified = false;
-                    StartWatchingFile(_currentFilePath);
-                    this.Title = $"FixMathpix 2025 - {_currentFilePath}";
-                    _lastFileWriteTime = File.GetLastWriteTimeUtc(saveFileDialog.FileName);
-                    _expectedSaveWriteTimeUtc = _lastFileWriteTime;
+                    _fileMonitor.StartWatching(_editorSession.CurrentFilePath);
+                    this.Title = $"FixMathpix 2025 - {_editorSession.CurrentFilePath}";
                     UpdateStatusBarFile();
                     StatusMessageTextBlock.Text = "Đã lưu tệp mới thành công";
                     MessageBox.Show("Đã lưu tệp thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1600,12 +1520,9 @@ namespace FixMathpix2025
                 }
                 catch (Exception ex)
                 {
+                    _fileMonitor.ClearSaveFlags();
                     MessageBox.Show("Không thể lưu tệp: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                     return false;
-                }
-                finally
-                {
-                    _isSaving = false; // Bỏ cờ sau khi lưu xong
                 }
             }
             return false;
@@ -1614,7 +1531,7 @@ namespace FixMathpix2025
         private void CloseFile_Click(object sender, RoutedEventArgs e)
         {
             // Kiểm tra xem có thay đổi chưa được lưu không
-            if (textEditor.IsModified)
+            if (_editorSession.IsDirty || textEditor.IsModified)
             {
                 var result = MessageBox.Show(
                     "Tệp hiện tại có thay đổi chưa được lưu. Bạn có muốn lưu lại không?",
@@ -1640,15 +1557,10 @@ namespace FixMathpix2025
 
         private void PerformFileClose()
         {
-            // Dừng theo dõi tệp
-            _fileWatcher.EnableRaisingEvents = false;
+            _fileMonitor.StopWatching();
+            SetEditorTextProgrammatically(string.Empty);
+            _editorSession.MarkClosed();
 
-            // Xóa nội dung và đặt lại trạng thái
-            textEditor.Clear();
-            _currentFilePath = null;
-            textEditor.IsModified = false; // Đặt lại trạng thái đã sửa đổi
-
-            // Cập nhật tiêu đề cửa sổ
             this.Title = "FixMathpix 2025";
             UpdateStatusBarFile();
             StatusMessageTextBlock.Text = "Đã đóng tệp";
@@ -1658,7 +1570,7 @@ namespace FixMathpix2025
         {
             if (FilePathTextBlock != null)
             {
-                FilePathTextBlock.Text = string.IsNullOrEmpty(_currentFilePath) ? "Chưa mở tệp nào" : _currentFilePath;
+                FilePathTextBlock.Text = !_editorSession.HasFile ? "Chưa mở tệp nào" : _editorSession.CurrentFilePath;
             }
         }
 
@@ -1927,9 +1839,9 @@ namespace FixMathpix2025
         private void InsertImageWizardButton_Click(object sender, RoutedEventArgs e)
         {
             string basePath = null;
-            if (!string.IsNullOrEmpty(_currentFilePath))
+            if (_editorSession.HasFile)
             {
-                basePath = Path.GetDirectoryName(_currentFilePath);
+                basePath = Path.GetDirectoryName(_editorSession.CurrentFilePath);
             }
 
             var window = new InsertImageWindow(basePath);

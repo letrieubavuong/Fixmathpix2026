@@ -101,10 +101,14 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AutoSaveRegistrationTracker.cs" />
+    <Compile Include="AutoSaveService.cs" />
     <Compile Include="BracketMismatchError.cs" />
     <Compile Include="CustomCommands.cs" />
     <Compile Include="DefaultEditorShortcuts.cs" />
+    <Compile Include="DocumentService.cs" />
+    <Compile Include="EditorSession.cs" />
     <Compile Include="EditorSettings.cs" />
+    <Compile Include="ExternalFileChangeMonitor.cs" />
     <Compile Include="GoToLineDialog.xaml.cs">
       <DependentUpon>GoToLineDialog.xaml</DependentUpon>
     </Compile>
