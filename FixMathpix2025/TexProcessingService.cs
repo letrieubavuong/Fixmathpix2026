@@ -10,16 +10,7 @@ namespace FixMathpix2025
         /// </summary>
         public static string FixMathtype(string text)
         {
-            if (string.IsNullOrEmpty(text)) return text;
-
-            text = text.Replace(@"\^{", @"^").Replace(@"_{", @"_");
-
-            // Dọn dẹp khoảng trắng
-            text = Regex.Replace(text, @"([{\[])\s+", "$1"); // Xóa khoảng trắng sau [ hoặc {
-            text = Regex.Replace(text, @"\s+([}\\.,\?;!])", "$1"); // Xóa khoảng trắng trước các dấu câu
-            text = Regex.Replace(text, @"^[ \t]+", "", RegexOptions.Multiline); // Xóa khoảng trắng/tab ở đầu mỗi dòng
-
-            return text;
+            return LatexTransformationService.FixMathtype(text);
         }
     }
 }

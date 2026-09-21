@@ -589,27 +589,8 @@ namespace FixMathpix2025
                 return;
             }
 
-            // 1. Xóa các ký tự $
-            string processedText = selectedText.Replace("$", "");
-
-            // 2. Xử lý các dòng có nhiều dấu '='
-            var lines = processedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            var resultLines = new StringBuilder();
-
-            foreach (var line in lines)
-            {
-                int firstEqualSign = line.IndexOf('=');
-                if (firstEqualSign != -1)
-                {
-                    // Thay thế tất cả các dấu '=' từ vị trí thứ hai trở đi
-                    resultLines.AppendLine(Regex.Replace(line, "(?<=.=.*)=", m => @"\\ " + "\n" + m.Value));
-                }
-                else
-                {
-                    resultLines.AppendLine(line);
-                }
-            }
-            WrapSelectionWithEnvironment("align*", resultLines.ToString().TrimEnd('\r', '\n'));
+            string replacementText = LatexTransformationService.WrapWithAlignStar(selectedText);
+            textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, replacementText);
         }
 
         private void ShortAnsButton_Click(object sender, RoutedEventArgs e)
@@ -638,23 +619,7 @@ namespace FixMathpix2025
                 return;
             }
 
-            string processedText = selectedText;
-
-            // - xóa begin, end align*
-            processedText = Regex.Replace(processedText, @"\\begin\{align\*\}", "", RegexOptions.IgnoreCase);
-            processedText = Regex.Replace(processedText, @"\\end\{align\*\}", "", RegexOptions.IgnoreCase);
-
-            // - xóa dấu $
-            processedText = processedText.Replace("$", "");
-
-            // - chuyển \tag thành \label
-            processedText = processedText.Replace(@"\tag", @"\label");
-
-            // Trim whitespace from the start and end of the content
-            processedText = processedText.Trim();
-
-            // Wrap in equation environment
-            string replacementText = $"\\begin{{equation}}\n\t{processedText}\n\\end{{equation}}";
+            string replacementText = LatexTransformationService.WrapWithEquation(selectedText);
 
             // Replace the selected text
             textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, replacementText);
@@ -693,25 +658,10 @@ namespace FixMathpix2025
                 return;
             }
 
-            var lines = selectedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            var newContent = new StringBuilder();
-
-            newContent.AppendLine(@"\choiceTF[t]");
-
-            // Regex để tìm các mục trong danh sách.
-            // Hỗ trợ các định dạng: "a.", "a)", "a/", "-", "•" theo sau là khoảng trắng.
-            var regex = new Regex(@"^\s*([a-z][\.\)\/]|[-•])\s*(.*)", RegexOptions.IgnoreCase);
-
-            foreach (var line in lines)
-            {
-                var match = regex.Match(line);
-                string itemContent = match.Success ? match.Groups[2].Value.Trim() : line.Trim();
-
-                newContent.AppendLine($"{{{itemContent}}}");
-            }
+            string replacementText = LatexTransformationService.WrapWithCauDS(selectedText);
 
             // Thay thế văn bản đã chọn bằng nội dung mới
-            textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, newContent.ToString());
+            textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, replacementText);
         }
 
         private void BangButton_Click(object sender, RoutedEventArgs e)
@@ -803,95 +753,8 @@ namespace FixMathpix2025
             try
             {
                 string currentContent = textEditor.Document.Text;
-
-                // 1. Chuẩn hóa và dọn dẹp cơ bản
-                currentContent = currentContent.Replace("\r\n", "\n");
-                currentContent = Regex.Replace(currentContent, @"\n{2,}", "\n"); // Nhiều dòng trống -> 1
-                currentContent = currentContent.Replace(@"\frac", @"\dfrac");
-
-                // 2. Loại bỏ các lệnh không cần thiết
-                currentContent = Regex.Replace(currentContent, @"\\mathrm{(.*?)}", m => m.Groups[1].Value, RegexOptions.Singleline);
-                currentContent = Regex.Replace(currentContent, @"\\text{(.*?)}", m => m.Groups[1].Value, RegexOptions.Singleline);
-
-                // 3. Xử lý "Chọn"
-                currentContent = Regex.Replace(currentContent, @"Chọn \$\\mathbf{(.*?)}\$", m => $"Chọn {m.Groups[1].Value}\n", RegexOptions.Singleline);
-
-                // 4. Xử lý các section và câu hỏi để bọc trong \begin{ex}...\end{ex}
-                // Thêm \end{ex} ở cuối để đảm bảo block cuối cùng được đóng
-                if (!currentContent.TrimEnd().EndsWith("\\end{ex}"))
-                {
-                    currentContent += "\n\\end{ex}";
-                }
-
-                // Thay thế các section/subsection/câu hỏi bằng cấu trúc \end{ex}...\begin{ex}
-                currentContent = Regex.Replace(currentContent, @"\\section\*{(\d{1,}.*?)}\n", m => $"\\end{{ex}}\n{m.Value.Trim()}\n\\begin{{ex}}\n", RegexOptions.Multiline);
-                currentContent = Regex.Replace(currentContent, @"\\section\*{BÀI(.*?)}\n", m => $"\\end{{ex}}\n\\section*{{BÀI{m.Groups[1].Value.Trim()}}}\n\\begin{{ex}}\n", RegexOptions.Multiline);
-                currentContent = Regex.Replace(currentContent, @"\\subsection\*{(\d{1,}.*?)}\n", m => $"\\end{{ex}}\n{m.Value.Trim()}\n\\begin{{ex}}\n", RegexOptions.Multiline);
-                currentContent = Regex.Replace(currentContent, @"\\section\*{(.*?)}\n", m => $"{m.Groups[1].Value.Trim()}\n", RegexOptions.Multiline); // Xóa các section không có số
-                currentContent = Regex.Replace(currentContent, @"^Câu\s\d+[\.:]", m => $"\n\\end{{ex}}\n\\begin{{ex}}\n", RegexOptions.Multiline);
-
-
-                // 5. Xử lý Lời giải
-                currentContent = currentContent.Replace(@"Hướng dẫn (Group Vật lý Physics)", "\\loigiai{\n");
-                currentContent = Regex.Replace(currentContent, @"Lời giải([\s\.:])", "\\loigiai{\n");
-
-                // 6. Xử lý các lựa chọn A, B, C, D
-                currentContent = Regex.Replace(currentContent, @"A\.(.*?)\nB\.(.*?)\nC\.(.*?)\nD\.(.*?)\n",
-                    m => $"\\choice\n{{{m.Groups[1].Value.Trim()}}}\n{{{m.Groups[2].Value.Trim()}}}\n{{{m.Groups[3].Value.Trim()}}}\n{{{m.Groups[4].Value.Trim()}}}\n",
-                    RegexOptions.Singleline);
-
-                // 7. Xử lý các block \loigiai bên trong \begin{ex}
-                string regexExBlocks = @"\\begin{ex}([\s\S]*?)\\end{ex}";
-                var newFullContent = new StringBuilder();
-                int lastIndex = 0;
-
-                foreach (Match match in Regex.Matches(currentContent, regexExBlocks))
-                {
-                    newFullContent.Append(currentContent, lastIndex, match.Index - lastIndex);
-                    string exBlockContent = match.Groups[1].Value;
-
-                    if (exBlockContent.Contains("\\loigiai{"))
-                    {
-                        // Nếu có \loigiai, thêm dấu } vào cuối nội dung của block đó
-                        newFullContent.Append("\\begin{ex}");
-                        newFullContent.Append(exBlockContent.TrimEnd());
-                        newFullContent.Append("\n}\n"); // Thêm dấu đóng cho \loigiai
-                        newFullContent.Append("\\end{ex}");
-                    }
-                    else
-                    {
-                        // Giữ nguyên block nếu không có \loigiai
-                        newFullContent.Append(match.Value);
-                    }
-                    lastIndex = match.Index + match.Length;
-                }
-                newFullContent.Append(currentContent, lastIndex, currentContent.Length - lastIndex);
-                currentContent = newFullContent.ToString();
-
-                // 8. Dọn dẹp cuối cùng
-                // Xóa \end{ex} thừa ở đầu
-                if (currentContent.StartsWith("\\end{ex}"))
-                {
-                    currentContent = currentContent.Substring("\\end{ex}".Length);
-                }
-                // Đảm bảo bắt đầu bằng \begin{ex}
-                if (!currentContent.TrimStart().StartsWith("\\begin{ex}"))
-                {
-                    currentContent = "\\begin{ex}\n" + currentContent;
-                }
-
-                currentContent = currentContent.Trim();
-
-                // Dọn dẹp khoảng trắng quanh dấu }
-                currentContent = currentContent.Replace(" }", "}")
-                                               .Replace("\t}", "}")
-                                               .Replace("{ ", "{")
-                                               .Replace(".}\n", "}\n");
-                currentContent = Regex.Replace(currentContent, @"\n{3,}", "\n\n");
-
-                currentContent = FixMathtype(currentContent);
-
-                textEditor.Document.Text = currentContent;
+                string newContent = LatexTransformationService.ProcessChuyenTex(currentContent);
+                textEditor.Document.Text = newContent;
                 StatusMessageTextBlock.Text = "Đã chuyển đổi TeX thành công";
             }
             catch (Exception ex)
@@ -907,7 +770,7 @@ namespace FixMathpix2025
         /// <returns>Văn bản đã được dọn dẹp.</returns>
         private string FixMathtype(string text)
         {
-            return TexProcessingService.FixMathtype(text);
+            return LatexTransformationService.FixMathtype(text);
         }
 
         private void FindReplaceButton_Click(object sender, RoutedEventArgs e)
@@ -1053,8 +916,7 @@ namespace FixMathpix2025
                 string content = group.Value;
 
                 // Thực hiện thay thế
-                string newContent = content.Replace("&", "");
-                newContent = Regex.Replace(newContent, @"\s*\\\\\s*", @" \\ "); // Chuẩn hóa khoảng trắng quanh \\
+                string newContent = LatexTransformationService.FixHevaContent(content);
 
                 // Chỉ thay thế nếu có sự thay đổi
                 if (content != newContent)
@@ -1466,20 +1328,7 @@ namespace FixMathpix2025
                 return;
             }
 
-            string processedText = selectedText;
-
-            // Kiểm tra và xử lý nếu có môi trường center
-            if (processedText.Contains(@"\begin{center}"))
-            {
-                processedText = processedText.Replace(@"\begin{center}", "").Trim();
-                processedText = processedText.Replace(@"\end{center}", "").Trim();
-
-                // Thêm "}{" trước \begin{tikzpicture}
-                processedText = processedText.Replace(@"\begin{tikzpicture}", @"}{" + Environment.NewLine + @"\begin{tikzpicture}");
-            }
-
-            string command = withThm ? @"\immini[thm]" : @"\immini";
-            string replacementText = $"{command}{{{processedText}}}";
+            string replacementText = LatexTransformationService.WrapWithImmini(selectedText, withThm);
 
             // Thay thế văn bản đã chọn bằng nội dung mới
             textEditor.Document.Replace(textEditor.SelectionStart, textEditor.SelectionLength, replacementText);
@@ -1487,27 +1336,8 @@ namespace FixMathpix2025
 
         private void FixEnumerateButton_Click(object sender, RoutedEventArgs e)
         {
-            string pattern = @"(\\begin\{(?:vd|vidu|ex|bt)\}[\s\S]*?\\loigiai\{)";
             string currentText = textEditor.Text;
-            int replacementsCount = 0;
-
-            string newText = Regex.Replace(currentText, pattern, match =>
-            {
-                string block = match.Value;
-                // Regex để tìm \begin{enumerate} có hoặc không có tham số tùy chọn, ví dụ: \begin{enumerate}[i.]
-                string enumeratePattern = @"\\begin{enumerate}(\[[^\]]*\])?";
-
-                if (Regex.IsMatch(block, enumeratePattern))
-                {
-                    replacementsCount++;
-                    // Thay thế \begin{enumerate} hoặc \begin{enumerate}[...] bằng \begin{listEX}[1]
-                    string modifiedBlock = Regex.Replace(block, enumeratePattern, @"\begin{listEX}[1]");
-                    // Thay thế \end{enumerate} bằng \end{listEX}
-                    modifiedBlock = modifiedBlock.Replace(@"\end{enumerate}", @"\end{listEX}");
-                    return modifiedBlock;
-                }
-                return block; // No change
-            }, RegexOptions.Multiline);
+            string newText = LatexTransformationService.FixEnumerate(currentText, out int replacementsCount);
 
             if (replacementsCount > 0)
             {
@@ -1522,29 +1352,8 @@ namespace FixMathpix2025
 
         private void FixTikzpictureButton_Click(object sender, RoutedEventArgs e)
         {
-            string pattern = @"(\\begin\{tikzpicture\}\[)([^\]]*)(\])";
             string currentText = textEditor.Text;
-            int replacementsCount = 0;
-
-            string newText = Regex.Replace(currentText, pattern, match =>
-            {
-                replacementsCount++;
-                string options = match.Groups[2].Value;
-
-                // Remove thickness options
-                options = Regex.Replace(options, @"\b(very thick|thick|thin)\b", "", RegexOptions.IgnoreCase);
-
-                // Remove color options
-                options = Regex.Replace(options, @"\b(red|green|blue|black|white|cyan|magenta|yellow|gray|darkgray|lightgray)\b", "", RegexOptions.IgnoreCase);
-
-                // Clean up extra commas and whitespace
-                options = Regex.Replace(options, @"\s*,\s*", ",", RegexOptions.None).Trim().Trim(',');
-
-                // Construct the new options string
-                string newOptions = "draw=Mapcolor, very thick," + (string.IsNullOrEmpty(options) ? "" : " " + options);
-
-                return match.Groups[1].Value + newOptions + match.Groups[3].Value;
-            }, RegexOptions.IgnoreCase);
+            string newText = LatexTransformationService.FixTikzpicture(currentText, out int replacementsCount);
 
             if (replacementsCount > 0)
             {
@@ -2002,45 +1811,7 @@ namespace FixMathpix2025
 
         private string UppercaseSectionContent(string input)
         {
-            StringBuilder sb = new StringBuilder();
-            bool inMath = false;
-            bool inCommand = false;
-
-            foreach (char c in input)
-            {
-                if (inMath)
-                {
-                    sb.Append(c);
-                    if (c == '$') inMath = false;
-                }
-                else
-                {
-                    if (c == '$')
-                    {
-                        inMath = true;
-                        sb.Append(c);
-                    }
-                    else if (c == '\\')
-                    {
-                        inCommand = true;
-                        sb.Append(c);
-                    }
-                    else if (inCommand)
-                    {
-                        sb.Append(c);
-                        // Lệnh kết thúc khi gặp ký tự không phải chữ cái (ví dụ: khoảng trắng, {, }, số...)
-                        if (!char.IsLetter(c))
-                        {
-                            inCommand = false;
-                        }
-                    }
-                    else
-                    {
-                        sb.Append(char.ToUpper(c));
-                    }
-                }
-            }
-            return sb.ToString();
+            return LatexTransformationService.UppercaseSectionContent(input);
         }
 
         private void SortQuestions_Click(object sender, RoutedEventArgs e)
@@ -2096,27 +1867,7 @@ namespace FixMathpix2025
 
         private string TitleCaseMath(string input)
         {
-            var result = new System.Text.StringBuilder();
-            bool inMath = false;
-
-            foreach (char c in input)
-            {
-                if (c == '$')
-                {
-                    inMath = !inMath;
-                    result.Append(c); 
-                }
-                else if (inMath)
-                {
-                    result.Append(c);
-                }
-                else
-                {
-                    result.Append(char.ToUpper(c));
-                }
-            }
-
-            return result.ToString();
+            return LatexTransformationService.TitleCaseMath(input);
         }
 
         private void CleanupText_Click(object sender, RoutedEventArgs e)
@@ -2125,25 +1876,7 @@ namespace FixMathpix2025
 
             try
             {
-                string text = textEditor.Text;
-
-                // 1. Chuẩn hóa ký tự xuống dòng: Xóa \r\n thành \n
-                text = text.Replace("\r\n", "\n");
-
-                // 2. Xóa các tab ở đầu dòng
-                text = Regex.Replace(text, @"^\t+", "", RegexOptions.Multiline);
-
-                // 3. Sửa lỗi dấu câu trong tiếng Việt
-                // Xóa khoảng trắng thừa trước các dấu câu
-                text = Regex.Replace(text, @"\s+([,.;:?!])", "$1");
-                text = Regex.Replace(text, @"^\s", "");
-                // Đảm bảo có một khoảng trắng sau dấu câu (nếu theo sau là một chữ cái/số)
-                text = Regex.Replace(text, @"([,.;:?!])(\w)", "$1 $2");
-
-                // 4. Xóa nhiều khoảng trắng liên tục (chỉ xóa space, không xóa các loại whitespace khác như tab, newline)
-                text = Regex.Replace(text, @"[ ]{2,}", " ");
-
-                textEditor.Text = text;
+                textEditor.Text = LatexTransformationService.CleanupText(textEditor.Text);
                 MessageBox.Show("Đã dọn dẹp văn bản thành công!", "Hoàn tất", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)

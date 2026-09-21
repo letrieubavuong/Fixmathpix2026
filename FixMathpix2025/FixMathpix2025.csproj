@@ -112,6 +112,7 @@
       <DependentUpon>InsertImageWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="LatexCompletionData.cs" />
+    <Compile Include="LatexTransformationService.cs" />
     <Compile Include="SearchReplaceItem.cs" />
     <Compile Include="SettingsWindow.xaml.cs">
       <DependentUpon>SettingsWindow.xaml</DependentUpon>
