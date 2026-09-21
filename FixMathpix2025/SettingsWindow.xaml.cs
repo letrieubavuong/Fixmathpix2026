@@ -200,7 +200,7 @@ namespace FixMathpix2025
             };
         }
 
-        private void ApplySettings()
+        private bool TryApplySettings()
         {
             // Lấy giá trị từ UI
             if (FontFamilyComboBox.SelectedItem is FontFamily selectedFont)
@@ -221,8 +221,7 @@ namespace FixMathpix2025
                 _currentSettings.AutoSaveIntervalSeconds = newInterval;
             }
 
-
-            _currentSettings.HighlightingColors.Clear();
+            var tempHighlightingColors = new Dictionary<string, string>();
             if (HighlightingColors != null)
             {
                 foreach (var colorVm in HighlightingColors)
@@ -231,12 +230,12 @@ namespace FixMathpix2025
                     {
                         // Validate hex color
                         ColorConverter.ConvertFromString(colorVm.ColorHex);
-                        _currentSettings.HighlightingColors[colorVm.Name] = colorVm.ColorHex;
+                        tempHighlightingColors[colorVm.Name] = colorVm.ColorHex;
                     }
                     catch (FormatException)
                     {
                         MessageBox.Show($"Mã màu không hợp lệ cho '{colorVm.Name}': {colorVm.ColorHex}", "Lỗi màu sắc", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return; // Ngăn không cho áp dụng nếu có lỗi
+                        return false; // Ngăn không cho áp dụng nếu có lỗi
                     }
                 }
             }
@@ -268,7 +267,7 @@ namespace FixMathpix2025
                         errorBuilder.AppendLine($"  - Phím tắt '{duplicate.Key}' được gán cho các chức năng: {string.Join(", ", duplicate.Value)}");
                     }
                     MessageBox.Show(this, errorBuilder.ToString(), "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return; // Ngăn không cho áp dụng cài đặt
+                    return false; // Ngăn không cho áp dụng cài đặt
                 }
             }
 
@@ -287,7 +286,14 @@ namespace FixMathpix2025
                     errorBuilder.AppendLine($"  - Phím tắt '{group.Key}' được gán cho các chức năng: {string.Join(", ", functionNames)}");
                 }
                 MessageBox.Show(this, errorBuilder.ToString(), "Lỗi phím tắt trùng lặp", MessageBoxButton.OK, MessageBoxImage.Error);
-                return; // Ngăn không cho áp dụng cài đặt
+                return false; // Ngăn không cho áp dụng cài đặt
+            }
+
+            // --- Save highlighting colors if valid ---
+            _currentSettings.HighlightingColors.Clear();
+            foreach (var kvp in tempHighlightingColors)
+            {
+                _currentSettings.HighlightingColors[kvp.Key] = kvp.Value;
             }
 
             // --- Save shortcuts if validation passes ---
@@ -302,21 +308,25 @@ namespace FixMathpix2025
 
             // Áp dụng cho MainWindow
             _mainWindow.ApplySettings(_currentSettings);
+            return true;
         }
 
-        private void SaveSettings()
+        private bool SaveSettings()
         {
-            ApplySettings(); // Đảm bảo settings object được cập nhật trước khi lưu
+            if (!TryApplySettings()) return false;
             _currentSettings.Save();
+            return true;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                SaveSettings();
-                this.DialogResult = true;
-                this.Close();
+                if (SaveSettings())
+                {
+                    this.DialogResult = true;
+                    this.Close();
+                }
             }
             catch (Exception ex)
             {
@@ -328,7 +338,7 @@ namespace FixMathpix2025
         {
             try
             {
-                ApplySettings();
+                TryApplySettings();
             }
             catch (Exception ex)
             {
